@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>英文朗读 + 中英同步（三引擎）</title>
+  <title>英文朗读 + 中英同步（三引擎稳定版）</title>
   <style>
     :root{--c:#2563eb;--g:#10b981;--b:#0ea5e9;--bg:#f8fafc;--txt:#0f172a}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--txt); margin:0;}
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);margin:0}
     .wrap{max-width:1100px;margin:auto;padding:24px}
     h1{display:flex;align-items:center;gap:10px;font-size:22px;color:var(--c)}
     .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 4px rgba(0,0,0,.05)}
@@ -31,41 +32,45 @@
     .progress{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
     .bar{height:100%;background:var(--b);width:0}
     .slider{width:220px}
+    .note{font-size:12px;color:#0f766e}
+    code{background:#f1f5f9;padding:2px 4px;border-radius:6px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>🎧 英文朗读 + 中英同步（OpenAI / ElevenLabs / 浏览器）</h1>
 
-    <div class=\"card\">
-      <label>OpenAI API Key（用于翻译；也可用于 OpenAI TTS，可留空）</label>
-      <div class=\"row\">
-        <input id=\"openaiKey\" type=\"password\" placeholder=\"sk-...（仅保存在本地浏览器）\" />
-        <div class=\"flex between\">
+    <!-- Keys -->
+    <div class="card">
+      <label>OpenAI API Key（用于翻译；或用于 OpenAI TTS，可留空）</label>
+      <div class="row">
+        <input id="openaiKey" type="password" placeholder="sk-...（仅保存在本地浏览器）" />
+        <div class="flex between">
           <small>不开启翻译或 OpenAI TTS 时，可以不填。浏览器朗读不消耗额度。</small>
-          <button id=\"saveKeys\" class=\"btn outline\">保存设置</button>
+          <button id="saveKeys" class="btn outline">保存设置</button>
         </div>
-        <div id=\"saveHint\" style=\"display:none;color:#16a34a;font-size:12px\">已保存到本地 ✓</div>
+        <div id="saveHint" style="display:none;color:#16a34a;font-size:12px">已保存到本地 ✓</div>
       </div>
     </div>
 
     <div class="card">
-      <div class=\"row grid-2\">
+      <div class="row grid-2">
         <div>
           <label>ElevenLabs API Key（启用 ElevenLabs 模式时必填）</label>
-          <input id=\"xiKey\" type=\"password\" placeholder=\"xi-...（仅本地保存）\" />
+          <input id="xiKey" type="password" placeholder="xi-...（仅本地保存）" />
         </div>
         <div>
           <label>ElevenLabs Voice ID（示例：Rachel → 21m00Tcm4TlvDq8ikWAM）</label>
-          <input id=\"xiVoice\" placeholder=\"21m00Tcm4TlvDq8ikWAM\" value=\"21m00Tcm4TlvDq8ikWAM\" />
+          <input id="xiVoice" placeholder="21m00Tcm4TlvDq8ikWAM" value="21m00Tcm4TlvDq8ikWAM" />
         </div>
       </div>
-      <div class=\"flex between\">
-        <small>提示：ElevenLabs 有每月 10,000 字符免费额度（视官方政策而定），更适合长文。</small>
-        <button id=\"clearKeys\" class=\"btn outline\">清除本地密钥</button>
+      <div class="flex between">
+        <small>提示：请确保 Key 以 <code>xi-</code> 开头，Voice ID 不要包含引号。</small>
+        <button id="clearKeys" class="btn outline">清除本地密钥</button>
       </div>
     </div>
 
+    <!-- Input & engine -->
     <div class="card">
       <label>英文内容（粘贴或上传 .docx）</label>
       <textarea id="inputEn" placeholder="Paste your English text here..."></textarea>
@@ -79,7 +84,7 @@
           <input id="translateChk" type="checkbox" checked />
         </div>
       </div>
-      <div style="margin-top:10px" class="flex between">
+      <div class="flex between" style="margin-top:10px">
         <div class="flex">
           <label>朗读引擎：</label>
           <select id="engine">
@@ -93,16 +98,19 @@
           <input id="rate" class="slider" type="range" min="0.6" max="1.4" step="0.05" value="1.0" />
         </div>
       </div>
-      <div class=\"flex\" style=\"margin-top:10px\">
-        <button id=\"prep\" class=\"btn\">拆句 & 翻译</button>
-        <button id=\"playFromCurrent\" class=\"btn\">从当前句开始朗读</button>
-        <button id=\"testSpeak\" class=\"btn outline\">测试朗读（Hello）</button>
-        <button id=\"stop\" class=\"btn outline\">停止</button>
+      <div class="flex" style="margin-top:10px;flex-wrap:wrap;gap:10px">
+        <button id="prep" class="btn">拆句 & 翻译</button>
+        <button id="playFromCurrent" class="btn">从当前句开始朗读</button>
+        <button id="quickSpeak" class="btn outline">直接朗读整段（浏览器）</button>
+        <button id="testSpeak" class="btn outline">测试朗读（Hello）</button>
+        <button id="stop" class="btn outline">停止</button>
       </div>
       <div id="status" style="margin-top:8px;color:#334155"></div>
       <div class="progress" style="margin-top:8px;display:none"><div class="bar" id="bar"></div></div>
+      <div id="diag" class="note" style="display:none;margin-top:8px"></div>
     </div>
 
+    <!-- Parallel view -->
     <div class="card">
       <div class="cols" style="max-height:60vh;overflow:auto">
         <div id="enCol"></div>
@@ -115,7 +123,7 @@
 
   <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
   <script>
-    // —— DOM refs ——
+    // --------- DOM ---------
     const $ = (id)=>document.getElementById(id);
     const openaiKeyEl=$('openaiKey');
     const xiKeyEl=$('xiKey');
@@ -128,6 +136,8 @@
     const rateVal=$('rateVal');
     const prep=$('prep');
     const playFromCurrent=$('playFromCurrent');
+    const quickSpeak=$('quickSpeak');
+    const testSpeak=$('testSpeak');
     const stopBtn=$('stop');
     const statusEl=$('status');
     const enCol=$('enCol');
@@ -136,8 +146,9 @@
     const bar=$('bar');
     const progressWrap=document.querySelector('.progress');
     const charCount=$('charCount');
+    const diag=$('diag');
 
-    // —— LocalStorage ——
+    // --------- localStorage ---------
     try{
       openaiKeyEl.value=localStorage.getItem('openaiKey')||'';
       xiKeyEl.value=localStorage.getItem('xiKey')||'';
@@ -146,9 +157,13 @@
 
     $('saveKeys').addEventListener('click',()=>{
       try{
-        localStorage.setItem('openaiKey',openaiKeyEl.value.trim());
-        localStorage.setItem('xiKey',xiKeyEl.value.trim());
-        localStorage.setItem('xiVoice',xiVoiceEl.value.trim());
+        const ok=openaiKeyEl.value.trim().replace(/^["']|["']$/g,'');
+        const xk=xiKeyEl.value.trim().replace(/^["']|["']$/g,'');
+        const xv=xiVoiceEl.value.trim().replace(/^["']|["']$/g,'');
+        localStorage.setItem('openaiKey',ok);
+        localStorage.setItem('xiKey',xk);
+        localStorage.setItem('xiVoice',xv);
+        openaiKeyEl.value=ok; xiKeyEl.value=xk; xiVoiceEl.value=xv;
         const hint=$('saveHint'); hint.style.display='block'; setTimeout(()=>hint.style.display='none',1600);
       }catch(e){ alert('无法保存：浏览器禁止了本地存储或处于隐私模式'); }
     });
@@ -159,14 +174,18 @@
       }catch(e){ alert('清除失败：'+e) }
     });
 
-    // —— Helpers ——
-    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+    // --------- helpers ---------
     const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+    function updateCount(){ charCount.textContent=(inputEn.value||'').length+" chars"; }
+    ['input','change','keyup','paste'].forEach(ev=> inputEn.addEventListener(ev,updateCount));
+    updateCount();
     rate.addEventListener('input',()=>{rateVal.textContent=Number(rate.value).toFixed(2)+'x'});
-    inputEn.addEventListener('input',()=>{charCount.textContent=(inputEn.value||'').length+" chars"});
 
-    // 等待浏览器语音加载（Chrome 需要）
-    function ensureVoicesLoaded(timeout=1500){
+    function showDiag(msg){ diag.textContent=msg; diag.style.display='block'; }
+    function hideDiag(){ diag.style.display='none'; diag.textContent=''; }
+
+    // 确保 Chrome 语音加载
+    function ensureVoicesLoaded(timeout=2000){
       return new Promise((resolve)=>{
         const have=()=> speechSynthesis.getVoices().length>0;
         if(have()) return resolve(true);
@@ -175,58 +194,48 @@
       });
     }
 
-    // —— Split into sentences ——
+    // --------- split & render ---------
+    let EN=[], ZH=[], currentIndex=0, isSpeaking=false;
+
     function splitSentences(txt){
       const cleaned=(txt||'').replace(/\s+/g,' ').trim();
       if(!cleaned) return [];
       return cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
     }
 
-    // —— Render sentence columns ——
-    let EN=[], ZH=[], currentIndex=0, isSpeaking=false;
     function renderCols(){
       enCol.innerHTML=''; zhCol.innerHTML='';
       EN.forEach((s,i)=>{
-        const d=document.createElement('div');
-        d.className='sent'+(i===currentIndex?' active':'');
-        d.textContent=s; d.onclick=()=>jumpTo(i);
-        d.dataset.idx=i; enCol.appendChild(d);
-        const z=document.createElement('div');
-        z.className='sent sent-zh'+(i===currentIndex?' active':'');
-        z.textContent=ZH[i]||''; zhCol.appendChild(z);
+        const d=document.createElement('div'); d.className='sent'+(i===currentIndex?' active':''); d.textContent=s; d.dataset.idx=i;
+        d.onclick=()=>{highlight(i); speakFrom(i)}; enCol.appendChild(d);
+        const z=document.createElement('div'); z.className='sent sent-zh'+(i===currentIndex?' active':''); z.textContent=ZH[i]||''; zhCol.appendChild(z);
       });
     }
     function highlight(i){
       currentIndex=i;
-      [...enCol.children].forEach((el,idx)=>{
-        el.classList.toggle('active',idx===i);
-      });
-      [...zhCol.children].forEach((el,idx)=>{
-        el.classList.toggle('active',idx===i);
-      });
+      [...enCol.children].forEach((el,idx)=> el.classList.toggle('active',idx===i));
+      [...zhCol.children].forEach((el,idx)=> el.classList.toggle('active',idx===i));
       enCol.children[i]?.scrollIntoView({behavior:'smooth',block:'center'});
       zhCol.children[i]?.scrollIntoView({behavior:'smooth',block:'center'});
     }
 
-    // —— File upload ——
+    // upload
     docx.addEventListener('change',async(e)=>{
       const f=e.target.files?.[0]; if(!f) return;
-      const buf=await f.arrayBuffer();
-      const {value}=await window.mammoth.extractRawText({arrayBuffer:buf});
-      inputEn.value=value.trim();
-      charCount.textContent=inputEn.value.length+" chars";
+      const buf=await f.arrayBuffer(); const {value}=await window.mammoth.extractRawText({arrayBuffer:buf});
+      inputEn.value=value.trim(); updateCount();
     });
 
-    // —— Translate by sentence ——
+    // translate by sentence
     async function translateBySentence(arr){
       if(!translateChk.checked) return new Array(arr.length).fill('');
       const key=openaiKeyEl.value.trim();
-      if(!key){ alert('开启了自动翻译，请先填写 OpenAI Key'); return new Array(arr.length).fill(''); }
-      statusEl.textContent='正在逐句翻译…';
+      if(!key){ alert('开启了自动翻译，请先填写 OpenAI Key，或先关掉自动翻译'); return new Array(arr.length).fill(''); }
+      statusEl.textContent='正在逐句翻译…'; hideDiag();
       const prompt='Translate each English sentence into Simplified Chinese. Return ONLY a JSON array of strings, same length and order as input. No commentary.';
       const content=arr.map((s,i)=>`${i+1}. ${s}`).join('\n');
       const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:prompt},{role:'user',content}],temperature:0.2})});
-      if(!res.ok){ statusEl.textContent='翻译失败'; throw new Error(await res.text()); }
+      if(!res.ok){ statusEl.textContent='翻译失败'; showDiag('翻译错误：'+await res.text()); return new Array(arr.length).fill(''); }
       const data=await res.json();
       const out=data.choices?.[0]?.message?.content||'';
       try{ const s=out.indexOf('['), e=out.lastIndexOf(']'); return JSON.parse(out.slice(s,e+1)).map(String); }
@@ -234,88 +243,67 @@
       finally{ statusEl.textContent=''; }
     }
 
-    // —— Prepare (split & translate) ——
+    // prepare
     prep.addEventListener('click',async()=>{
-      if(!inputEn.value.trim()){ alert('请先粘贴英文内容'); return; }
-      EN=splitSentences(inputEn.value);
+      const txt=inputEn.value.trim();
+      if(!txt){ alert('请先粘贴英文内容'); return; }
+      EN=splitSentences(txt);
       if(EN.length===0){ alert('没有检测到完整句子（请检查英文句尾是否有 . ? !）'); return; }
-      ZH=new Array(EN.length).fill('');
-      currentIndex=0; renderCols(); highlight(0);
-      try{ ZH=await translateBySentence(EN); renderCols(); highlight(0);}catch(e){console.error(e)}
-    });
-      ZH=new Array(EN.length).fill('');
-      currentIndex=0; renderCols(); highlight(0);
+      ZH=new Array(EN.length).fill(''); currentIndex=0; renderCols(); highlight(0);
       try{ ZH=await translateBySentence(EN); renderCols(); highlight(0);}catch(e){console.error(e)}
     });
 
-    // —— Jump ——
-    function jumpTo(i){ highlight(i); speakFrom(i); }
-
-    // —— Engines ——
+    // --------- engines ---------
     async function speakFrom(start){
-      if(!EN.length){ alert('还没有句子可读，请先“拆句 & 翻译”'); return; }
-      if(engine.value!=='browser'){
-        // 非浏览器引擎要求必须手动点击保存过 Key，避免输入框丢失
-        if(engine.value==='openai' && !openaiKeyEl.value.trim()) return alert('OpenAI 模式需要 OpenAI Key');
-        if(engine.value==='eleven' && !xiKeyEl.value.trim()) return alert('ElevenLabs 模式需要 ElevenLabs Key');
+      const eng = engine.value;
+      // 浏览器模式：如果还没拆句，允许直接整段朗读
+      if(eng==='browser' && EN.length===0){
+        const text=inputEn.value.trim(); if(!text){ alert('请先粘贴英文内容'); return; }
+        await ensureVoicesLoaded(); speechSynthesis.cancel();
+        const u=new SpeechSynthesisUtterance(text); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
+        u.onerror=(e)=>showDiag('浏览器朗读错误：'+(e?.error||e)); speechSynthesis.speak(u); return;
       }
-      isSpeaking=true; showProgress(engine.value!=='browser');
+      if(!EN.length){ alert('还没有句子可读，请先“拆句 & 翻译”'); return; }
+      if(eng!=='browser'){
+        if(eng==='openai' && !openaiKeyEl.value.trim()) return alert('OpenAI 模式需要 OpenAI Key');
+        if(eng==='eleven' && !xiKeyEl.value.trim()) return alert('ElevenLabs 模式需要 ElevenLabs Key');
+      }
+      isSpeaking=true; showProgress(eng!=='browser'); hideDiag();
       try{
-      if(!EN.length) return;
-      const eng=engine.value; isSpeaking=true; showProgress(eng!=='browser');
-      try{
-        if(eng==='browser'){
-          await speakBrowserFrom(start);
-        }else if(eng==='openai'){
-          await speakOpenAIFrom(start);
-        }else{
-          await speakElevenFrom(start);
-        }
-      }catch(err){ alert('朗读出错：'+(err?.message||err)); }
+        if(eng==='browser')      await speakBrowserFrom(start);
+        else if(eng==='openai')  await speakOpenAIFrom(start);
+        else                      await speakElevenFrom(start);
+      }catch(err){ showDiag('朗读出错：'+(err?.message||err)); }
       finally{ isSpeaking=false; showProgress(false); }
     }
 
-    // —— Browser speech ——
     async function speakBrowserFrom(start){
-      if(!('speechSynthesis' in window)) throw new Error('当前浏览器不支持内置朗读');
-      await ensureVoicesLoaded(); // 确保语音已加载
-      speechSynthesis.cancel();
+      await ensureVoicesLoaded(); speechSynthesis.cancel();
       for(let i=start;i<EN.length;i++){
         highlight(i);
-        const u=new SpeechSynthesisUtterance(EN[i]);
-        u.lang='en-US';
-        u.rate=clamp(parseFloat(rate.value),0.6,1.4);
-        u.onerror=(e)=>console.warn('speech error',e);
+        const u=new SpeechSynthesisUtterance(EN[i]); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
         await new Promise(res=>{ u.onend=res; u.onerror=res; speechSynthesis.speak(u); });
-        if(!isSpeaking) break;
-      }
-    });
         if(!isSpeaking) break;
       }
     }
 
-    // —— OpenAI sentence TTS ——
     async function speakOpenAIFrom(start){
-      const key=openaiKeyEl.value.trim(); if(!key) throw new Error('请填写 OpenAI Key');
+      const key=openaiKeyEl.value.trim();
       for(let i=start;i<EN.length;i++){
-        highlight(i); const url=await openaiTts(EN[i],key); await play(url);
-        setBar(((i-start+1)/(EN.length-start))*100);
+        highlight(i); const url=await openaiTts(EN[i],key); await play(url); setBar(((i-start+1)/(EN.length-start))*100);
         if(!isSpeaking) break;
       }
     }
     async function openaiTts(text,key){
       const res=await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini-tts',voice:'alloy',input:text,format:'mp3'})});
       if(!res.ok) throw new Error(await res.text());
-      const buf=await res.arrayBuffer(); const blob=new Blob([buf],{type:'audio/mpeg'}); return URL.createObjectURL(blob);
+      const buf=await res.arrayBuffer(); return URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}));
     }
 
-    // —— ElevenLabs sentence TTS ——
     async function speakElevenFrom(start){
       const key=xiKeyEl.value.trim(); const vid=xiVoiceEl.value.trim();
-      if(!key||!vid) throw new Error('请填写 ElevenLabs Key 和 Voice ID');
       for(let i=start;i<EN.length;i++){
-        highlight(i); const url=await elevenTts(EN[i],key,vid); await play(url);
-        setBar(((i-start+1)/(EN.length-start))*100);
+        highlight(i); const url=await elevenTts(EN[i],key,vid); await play(url); setBar(((i-start+1)/(EN.length-start))*100);
         if(!isSpeaking) break;
       }
     }
@@ -323,10 +311,9 @@
       const url=`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`;
       const res=await fetch(url,{method:'POST',headers:{'xi-api-key':key,'Content-Type':'application/json','accept':'audio/mpeg'},body:JSON.stringify({text,model_id:'eleven_turbo_v2',voice_settings:{stability:0.5,similarity_boost:0.8}})});
       if(!res.ok) throw new Error(await res.text());
-      const buf=await res.arrayBuffer(); const blob=new Blob([buf],{type:'audio/mpeg'}); return URL.createObjectURL(blob);
+      const buf=await res.arrayBuffer(); return URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}));
     }
 
-    // —— Player ——
     function play(url){
       return new Promise((resolve,reject)=>{
         player.src=url; player.playbackRate=clamp(parseFloat(rate.value),0.6,1.4);
@@ -334,33 +321,16 @@
       });
     }
 
-    // —— Stop & progress ——
+    // stop & progress
     stopBtn.addEventListener('click',()=>{ isSpeaking=false; speechSynthesis?.cancel?.(); player.pause(); });
     function showProgress(v){ progressWrap.style.display=v?'block':'none'; if(!v) setBar(0); }
     function setBar(p){ bar.style.width=p+'%'; }
 
-    // —— Start from current highlighted ——
-    playFromCurrent.addEventListener('click',()=>{
-      if(!EN.length){ alert('还没有拆句，请先点击“拆句 & 翻译”'); return; }
-      speakFrom(currentIndex);
-    });
-
-    // —— Test speak ——
-    $('testSpeak').addEventListener('click', async ()=>{
-      try{
-        await ensureVoicesLoaded();
-        const u=new SpeechSynthesisUtterance('Hello from New York! Let\'s test your speakers.');
-        u.lang='en-US';
-        u.rate=clamp(parseFloat(rate.value),0.6,1.4);
-        speechSynthesis.cancel(); speechSynthesis.speak(u);
-      }catch(e){ alert('测试朗读失败：'+(e?.message||e)); }
-    });
-
-    // 点击英文句子开始朗读
-    enCol.addEventListener('click',(e)=>{
-      const d=e.target.closest('.sent'); if(!d) return; const i=Number(d.dataset.idx); if(Number.isFinite(i)) speakFrom(i);
-    });('click',(e)=>{
-      const d=e.target.closest('.sent'); if(!d) return; const i=Number(d.dataset.idx); if(Number.isFinite(i)) speakFrom(i);
+    // quick actions
+    playFromCurrent.addEventListener('click',()=> speakFrom(currentIndex));
+    quickSpeak.addEventListener('click',()=>{ engine.value='browser'; speakFrom(0); });
+    testSpeak.addEventListener('click', async ()=>{
+      try{ await ensureVoicesLoaded(); speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance("Hello from your browser! Testing testing."); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4); speechSynthesis.speak(u);}catch(e){ showDiag('测试朗读失败：'+(e?.message||e)); }
     });
   </script>
 </body>
