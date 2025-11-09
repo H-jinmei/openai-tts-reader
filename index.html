@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 英文朗读 + 自动翻译</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      margin: 0;
+      padding: 2rem;
+      max-width: 900px;
+      margin-inline: auto;
+    }
+    h1 { color: #2563eb; }
+    textarea, input, select {
+      width: 100%;
+      font-size: 1rem;
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .section {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    audio { width: 100%; margin-top: 1rem; }
+    label { font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>🎧 AI 英文朗读 + 自动翻译</h1>
+  <div class="section">
+    <label>1️⃣ 输入你的 OpenAI API Key：</label>
+    <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxxxxxx" />
+    <small>（仅保存在浏览器本地，不会上传）</small>
+  </div>
+
+  <div class="section">
+    <label>2️⃣ 输入英文内容或上传 .docx 文件：</label>
+    <textarea id="textInput" rows="8" placeholder="粘贴你的英文内容..."></textarea>
+    <input type="file" id="fileInput" accept=".docx" />
+  </div>
+
+  <div class="section">
+    <label>3️⃣ 选择朗读声音：</label>
+    <select id="voiceSelect">
+      <option value="alloy">Alloy（温暖自然）</option>
+      <option value="luna">Luna（柔和女声）</option>
+      <option value="verse">Verse（节奏鲜明）</option>
+      <option value="shimmer">Shimmer（轻快年轻）</option>
+      <option value="coral">Coral（低沉稳重）</option>
+    </select>
+    <br />
+    <label><input type="checkbox" id="translate" checked /> 自动翻译成中文</label>
+    <br /><br />
+    <button id="generateBtn">生成语音</button>
+  </div>
+
+  <div class="section">
+    <h3>🗣️ 英文语音朗读：</h3>
+    <audio id="audioPlayer" controls></audio>
+    <div id="status"></div>
+  </div>
+
+  <div class="section">
+    <h3>🌏 中文翻译：</h3>
+    <textarea id="translationOutput" rows="8" readonly></textarea>
+  </div>
+
+  <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
+  <script>
+    const apiKeyInput = document.getElementById("apiKey");
+    const textInput = document.getElementById("textInput");
+    const fileInput = document.getElementById("fileInput");
+    const voiceSelect = document.getElementById("voiceSelect");
+    const translateCheck = document.getElementById("translate");
+    const generateBtn = document.getElementById("generateBtn");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const translationOutput = document.getElementById("translationOutput");
+    const statusDiv = document.getElementById("status");
+
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const arrayBuffer = await file.arrayBuffer();
+      const { value } = await window.mammoth.extractRawText({ arrayBuffer });
+      textInput.value = value.trim();
+    });
+
+    generateBtn.addEventListener("click", async () => {
+      const apiKey = apiKeyInput.value.trim();
+      const text = textInput.value.trim();
+      if (!apiKey) return alert("请输入 OpenAI API Key！");
+      if (!text) return alert("请输入或上传英文内容！");
+      statusDiv.textContent = "⏳ 正在生成语音，请稍候...";
+      generateBtn.disabled = true;
+
+      try {
+        // 自动翻译
+        if (translateCheck.checked) {
+          statusDiv.textContent = "正在翻译为中文...";
+          const tRes = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              messages: [
+                { role: "system", content: "Translate the user's English text into natural Simplified Chinese." },
+                { role: "user", content: text }
+              ],
+            }),
+          });
+          const tData = await tRes.json();
+          const zh = tData.choices?.[0]?.message?.content?.trim() || "";
+          translationOutput.value = zh;
+        }
+
+        // 生成语音
+        statusDiv.textContent = "正在生成朗读语音...";
+        const res = await fetch("https://api.openai.com/v1/audio/speech", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini-tts",
+            voice: voiceSelect.value,
+            input: text,
+          }),
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+        const arrayBuffer = await res.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
+        const url = URL.createObjectURL(blob);
+        audioPlayer.src = url;
+        statusDiv.textContent = "✅ 生成完成，可以播放语音啦！";
+      } catch (err) {
+        console.error(err);
+        alert("出错了：" + err.message);
+      } finally {
+        generateBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
