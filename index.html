@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>英文朗读 + 中英同步（三引擎稳定版）</title>
+  <title>英文朗读 + 中英同步（三引擎 + 美式音标）</title>
   <style>
     :root{--c:#2563eb;--g:#10b981;--b:#0ea5e9;--bg:#f8fafc;--txt:#0f172a}
     *{box-sizing:border-box}
@@ -18,7 +18,7 @@
     textarea{min-height:140px}
     small{color:#64748b}
     .btn{background:var(--c);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
-    .btn.outline{background:#fff;color:var(--txt);border:1px solid #cbd5e1}
+    .btn.outline{background:#fff;color:#0f172a;border:1px solid #cbd5e1}
     .btn:disabled{opacity:.5;cursor:not-allowed}
     .flex{display:flex;align-items:center;gap:10px}
     .between{justify-content:space-between}
@@ -29,11 +29,11 @@
     .sent:hover{background:#f8fafc;border-color:#e2e8f0}
     .sent.active{background:#eef2ff;border-color:#a5b4fc;font-weight:600;color:#4338ca}
     .sent-zh.active{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .ipa{font-size:12px;color:#475569;margin-top:4px}
     .progress{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
     .bar{height:100%;background:var(--b);width:0}
     .slider{width:220px}
     .note{font-size:12px;color:#0f766e}
-    code{background:#f1f5f9;padding:2px 4px;border-radius:6px}
   </style>
 </head>
 <body>
@@ -42,11 +42,11 @@
 
     <!-- Keys -->
     <div class="card">
-      <label>OpenAI API Key（用于翻译；或用于 OpenAI TTS，可留空）</label>
+      <label>OpenAI API Key（用于翻译 & 生成美式音标；也可用于 OpenAI TTS）</label>
       <div class="row">
         <input id="openaiKey" type="password" placeholder="sk-...（仅保存在本地浏览器）" />
         <div class="flex between">
-          <small>不开启翻译或 OpenAI TTS 时，可以不填。浏览器朗读不消耗额度。</small>
+          <small>不开启翻译/音标或 OpenAI TTS 时，可以不填。浏览器朗读不消耗额度。</small>
           <button id="saveKeys" class="btn outline">保存设置</button>
         </div>
         <div id="saveHint" style="display:none;color:#16a34a;font-size:12px">已保存到本地 ✓</div>
@@ -65,7 +65,7 @@
         </div>
       </div>
       <div class="flex between">
-        <small>提示：请确保 Key 以 <code>xi-</code> 开头，Voice ID 不要包含引号。</small>
+        <small>提示：请确保 Key 以 xi- 开头，Voice ID 不要加引号。</small>
         <button id="clearKeys" class="btn outline">清除本地密钥</button>
       </div>
     </div>
@@ -79,9 +79,15 @@
           <input type="file" id="docx" accept=".docx" />
           <span id="charCount" class="pill">0 chars</span>
         </div>
-        <div class="flex">
-          <label for="translateChk">自动翻译中文</label>
-          <input id="translateChk" type="checkbox" checked />
+        <div class="flex" style="gap:16px">
+          <label class="flex" style="gap:6px;align-items:center">
+            <span>自动翻译中文</span>
+            <input id="translateChk" type="checkbox" checked />
+          </label>
+          <label class="flex" style="gap:6px;align-items:center">
+            <span>显示美式音标</span>
+            <input id="ipaChk" type="checkbox" />
+          </label>
         </div>
       </div>
       <div class="flex between" style="margin-top:10px">
@@ -99,7 +105,7 @@
         </div>
       </div>
       <div class="flex" style="margin-top:10px;flex-wrap:wrap;gap:10px">
-        <button id="prep" class="btn">拆句 & 翻译</button>
+        <button id="prep" class="btn">拆句 & 翻译/音标</button>
         <button id="playFromCurrent" class="btn">从当前句开始朗读</button>
         <button id="quickSpeak" class="btn outline">直接朗读整段（浏览器）</button>
         <button id="testSpeak" class="btn outline">测试朗读（Hello）</button>
@@ -131,6 +137,7 @@
     const inputEn=$('inputEn');
     const docx=$('docx');
     const translateChk=$('translateChk');
+    const ipaChk=$('ipaChk');
     const engine=$('engine');
     const rate=$('rate');
     const rateVal=$('rateVal');
@@ -184,7 +191,6 @@
     function showDiag(msg){ diag.textContent=msg; diag.style.display='block'; }
     function hideDiag(){ diag.style.display='none'; diag.textContent=''; }
 
-    // 确保 Chrome 语音加载
     function ensureVoicesLoaded(timeout=2000){
       return new Promise((resolve)=>{
         const have=()=> speechSynthesis.getVoices().length>0;
@@ -195,7 +201,7 @@
     }
 
     // --------- split & render ---------
-    let EN=[], ZH=[], currentIndex=0, isSpeaking=false;
+    let EN=[], ZH=[], PH=[], currentIndex=0, isSpeaking=false;
 
     function splitSentences(txt){
       const cleaned=(txt||'').replace(/\s+/g,' ').trim();
@@ -206,8 +212,9 @@
     function renderCols(){
       enCol.innerHTML=''; zhCol.innerHTML='';
       EN.forEach((s,i)=>{
-        const d=document.createElement('div'); d.className='sent'+(i===currentIndex?' active':''); d.textContent=s; d.dataset.idx=i;
-        d.onclick=()=>{highlight(i); speakFrom(i)}; enCol.appendChild(d);
+        const d=document.createElement('div'); d.className='sent'+(i===currentIndex?' active':'');
+        const ipa = PH[i] ? `<div class="ipa">/${PH[i]}/</div>` : '';
+        d.innerHTML = `<div>${s}</div>${ipa}`; d.dataset.idx=i; d.onclick=()=>{highlight(i); speakFrom(i)}; enCol.appendChild(d);
         const z=document.createElement('div'); z.className='sent sent-zh'+(i===currentIndex?' active':''); z.textContent=ZH[i]||''; zhCol.appendChild(z);
       });
     }
@@ -243,37 +250,53 @@
       finally{ statusEl.textContent=''; }
     }
 
+    // IPA by sentence (American)
+    async function ipaBySentence(arr){
+      if(!ipaChk.checked) return new Array(arr.length).fill('');
+      const key=openaiKeyEl.value.trim();
+      if(!key){ alert('显示美式音标需要 OpenAI Key（或先关闭“显示美式音标”）'); return new Array(arr.length).fill(''); }
+      statusEl.textContent='正在生成美式音标…'; hideDiag();
+      const prompt='You are a phonetics assistant. For each English sentence, output its American IPA transcription. Return ONLY a JSON array of strings (no numbering, no extra text). Use IPA symbols; do NOT include surrounding slashes.';
+      const content=arr.join('\n');
+      const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:prompt},{role:'user',content}],temperature:0})});
+      if(!res.ok){ statusEl.textContent='音标生成失败'; showDiag('音标错误：'+await res.text()); return new Array(arr.length).fill(''); }
+      const data=await res.json(); const out=data.choices?.[0]?.message?.content||'';
+      try{ const s=out.indexOf('['), e=out.lastIndexOf(']'); return JSON.parse(out.slice(s,e+1)).map(String); }
+      catch{ return new Array(arr.length).fill(''); }
+      finally{ statusEl.textContent=''; }
+    }
+
     // prepare
     prep.addEventListener('click',async()=>{
       const txt=inputEn.value.trim();
       if(!txt){ alert('请先粘贴英文内容'); return; }
       EN=splitSentences(txt);
       if(EN.length===0){ alert('没有检测到完整句子（请检查英文句尾是否有 . ? !）'); return; }
-      ZH=new Array(EN.length).fill(''); currentIndex=0; renderCols(); highlight(0);
-      try{ ZH=await translateBySentence(EN); renderCols(); highlight(0);}catch(e){console.error(e)}
+      ZH=new Array(EN.length).fill(''); PH=new Array(EN.length).fill('');
+      currentIndex=0; renderCols(); highlight(0);
+      try{ ZH=await translateBySentence(EN); PH=await ipaBySentence(EN); renderCols(); highlight(0);}catch(e){console.error(e)}
     });
 
-    // --------- engines ---------
+    // --------- engines (unchanged) ---------
     async function speakFrom(start){
-      const eng = engine.value;
-      // 浏览器模式：如果还没拆句，允许直接整段朗读
+      const eng=engine.value;
       if(eng==='browser' && EN.length===0){
         const text=inputEn.value.trim(); if(!text){ alert('请先粘贴英文内容'); return; }
         await ensureVoicesLoaded(); speechSynthesis.cancel();
         const u=new SpeechSynthesisUtterance(text); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
-        u.onerror=(e)=>showDiag('浏览器朗读错误：'+(e?.error||e)); speechSynthesis.speak(u); return;
+        u.onerror=(e)=>console.warn('浏览器朗读错误',e); speechSynthesis.speak(u); return;
       }
-      if(!EN.length){ alert('还没有句子可读，请先“拆句 & 翻译”'); return; }
+      if(!EN.length){ alert('还没有句子可读，请先“拆句 & 翻译/音标”'); return; }
       if(eng!=='browser'){
         if(eng==='openai' && !openaiKeyEl.value.trim()) return alert('OpenAI 模式需要 OpenAI Key');
         if(eng==='eleven' && !xiKeyEl.value.trim()) return alert('ElevenLabs 模式需要 ElevenLabs Key');
       }
-      isSpeaking=true; showProgress(eng!=='browser'); hideDiag();
+      isSpeaking=true; showProgress(eng!=='browser');
       try{
-        if(eng==='browser')      await speakBrowserFrom(start);
-        else if(eng==='openai')  await speakOpenAIFrom(start);
-        else                      await speakElevenFrom(start);
-      }catch(err){ showDiag('朗读出错：'+(err?.message||err)); }
+        if(eng==='browser') await speakBrowserFrom(start);
+        else if(eng==='openai') await speakOpenAIFrom(start);
+        else await speakElevenFrom(start);
+      }catch(err){ alert('朗读出错：'+(err?.message||err)); }
       finally{ isSpeaking=false; showProgress(false); }
     }
 
@@ -330,7 +353,7 @@
     playFromCurrent.addEventListener('click',()=> speakFrom(currentIndex));
     quickSpeak.addEventListener('click',()=>{ engine.value='browser'; speakFrom(0); });
     testSpeak.addEventListener('click', async ()=>{
-      try{ await ensureVoicesLoaded(); speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance("Hello from your browser! Testing testing."); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4); speechSynthesis.speak(u);}catch(e){ showDiag('测试朗读失败：'+(e?.message||e)); }
+      try{ await ensureVoicesLoaded(); speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance("Hello from your browser! Testing testing."); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4); speechSynthesis.speak(u);}catch(e){ alert('测试朗读失败：'+(e?.message||e)); }
     });
   </script>
 </body>
