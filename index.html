@@ -1,8 +1,209 @@
 <!DOCTYPE html>
-<html>
-  <head><meta charset="utf-8"><title>Test</title></head>
-  <body>
-    <h1>Hello Vercel</h1>
-    <p>如果你看到这一行，说明 index.html 已正确渲染。</p>
-  </body>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 英文朗读 + 自动翻译</title>
+  <style>
+    body { font-family: "Segoe UI", sans-serif; background:#f8fafc; color:#1e293b; margin:0; padding:2rem; max-width:900px; margin-inline:auto; }
+    h1 { color:#2563eb; }
+    textarea, input, select { width:100%; font-size:1rem; padding:.5rem; margin:.5rem 0; border-radius:8px; border:1px solid #cbd5e1; }
+    button { background:#2563eb; color:#fff; border:none; padding:.6rem 1.2rem; border-radius:8px; cursor:pointer; font-size:1rem; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .section { background:#fff; border-radius:16px; padding:1.5rem; margin-bottom:1.5rem; box-shadow:0 2px 4px rgba(0,0,0,.08); }
+    audio { width:100%; margin-top:1rem; }
+    label { font-weight:600; }
+    .row { display:flex; gap:12px; align-items:center; }
+  </style>
+</head>
+<body>
+  <h1>🎧 AI 英文朗读 + 自动翻译</h1>
+
+  <div class="section">
+    <label>1️⃣ 输入你的 OpenAI API Key（不想用额度可跳过并开启“免费朗读”）：</label>
+    <input type="password" id="apiKey" placeholder="sk-xxxxxxxxxxxxxxxx" />
+    <small>仅保存在本地浏览器；无需则留空，改用免费朗读。</small>
+  </div>
+
+  <div class="section">
+    <label>2️⃣ 粘贴英文或上传 .docx 文件：</label>
+    <textarea id="textInput" rows="8" placeholder="粘贴你的英文内容..."></textarea>
+    <input type="file" id="fileInput" accept=".docx" />
+  </div>
+
+  <div class="section">
+    <div class="row">
+      <label style="min-width:120px;">3️⃣ 选择声音：</label>
+      <select id="voiceSelect">
+        <option value="alloy">Alloy（温暖自然）</option>
+        <option value="luna">Luna（柔和女声）</option>
+        <option value="verse">Verse（节奏鲜明）</option>
+        <option value="shimmer">Shimmer（轻快年轻）</option>
+        <option value="coral">Coral（低沉稳重）</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label><input type="checkbox" id="translate" checked /> 自动翻译成中文</label>
+    </div>
+
+    <div class="row">
+      <label><input type="checkbox" id="useFree" /> 使用浏览器免费朗读（不消耗额度）</label>
+    </div>
+
+    <br />
+    <button id="generateBtn">生成语音 / 开始朗读</button>
+  </div>
+
+  <div class="section">
+    <h3>🗣️ 英文语音朗读：</h3>
+    <audio id="audioPlayer" controls></audio>
+    <div id="status"></div>
+  </div>
+
+  <div class="section">
+    <h3>🌏 中文翻译：</h3>
+    <textarea id="translationOutput" rows="8" readonly></textarea>
+  </div>
+
+  <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
+  <script>
+    // 元素
+    const apiKeyInput = document.getElementById("apiKey");
+    const textInput = document.getElementById("textInput");
+    const fileInput = document.getElementById("fileInput");
+    const voiceSelect = document.getElementById("voiceSelect");
+    const translateCheck = document.getElementById("translate");
+    const useFreeCheck = document.getElementById("useFree");
+    const generateBtn = document.getElementById("generateBtn");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const translationOutput = document.getElementById("translationOutput");
+    const statusDiv = document.getElementById("status");
+
+    // 记住 API Key（本地）
+    const saved = localStorage.getItem("openai_api_key");
+    if (saved) apiKeyInput.value = saved;
+    apiKeyInput.addEventListener("input", () => {
+      if (apiKeyInput.value.trim()) {
+        localStorage.setItem("openai_api_key", apiKeyInput.value.trim());
+      }
+    });
+
+    // 读取 docx
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const arrayBuffer = await file.arrayBuffer();
+      const { value } = await window.mammoth.extractRawText({ arrayBuffer });
+      textInput.value = value.trim();
+    });
+
+    // 免费朗读
+    function freeSpeak(text) {
+      if (!("speechSynthesis" in window)) {
+        alert("当前浏览器不支持内置朗读。建议使用 Chrome/Edge/Safari。");
+        return;
+      }
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US";
+      u.rate = 1.0;
+      u.pitch = 1.0;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }
+
+    // OpenAI 翻译
+    async function translateToChinese(text, apiKey) {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "Translate the user's English text into natural Simplified Chinese." },
+            { role: "user", content: text }
+          ],
+          temperature: 0.2
+        }),
+      });
+      const data = await res.json();
+      return data.choices?.[0]?.message?.content?.trim?.() ?? "";
+    }
+
+    // OpenAI 语音
+    async function tts(text, apiKey, voice="alloy") {
+      const res = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini-tts",
+          voice,
+          input: text,
+          format: "mp3"
+        }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        try {
+          const j = JSON.parse(t);
+          if (j?.error?.code === "insufficient_quota" || j?.error?.type === "insufficient_quota") {
+            throw new Error("额度不足（insufficient_quota）。可切换“使用浏览器免费朗读”，或在 Billing 里充值/提高 Monthly budget。");
+          }
+          throw new Error(j?.error?.message || t);
+        } catch {
+          throw new Error(t);
+        }
+      }
+      const buf = await res.arrayBuffer();
+      return new Blob([buf], { type: "audio/mpeg" });
+    }
+
+    // 主按钮
+    generateBtn.addEventListener("click", async () => {
+      const apiKey = apiKeyInput.value.trim();
+      const text = textInput.value.trim();
+      if (!text) return alert("请输入或上传英文内容！");
+
+      // 翻译（可选）
+      try {
+        if (translateCheck.checked && apiKey && !useFreeCheck.checked) {
+          statusDiv.textContent = "正在翻译为中文…";
+          const zh = await translateToChinese(text, apiKey);
+          translationOutput.value = zh;
+        } else if (!translateCheck.checked) {
+          translationOutput.value = "";
+        }
+      } catch (e) {
+        translationOutput.value = "翻译失败：" + (e?.message || e);
+      }
+
+      // 免费朗读模式
+      if (useFreeCheck.checked) {
+        statusDiv.textContent = "使用浏览器内置朗读（不消耗额度）…";
+        freeSpeak(text);
+        return;
+      }
+
+      // OpenAI TTS 模式
+      if (!apiKey) return alert("请先填入 OpenAI API Key，或勾选“使用浏览器免费朗读”。");
+
+      try {
+        statusDiv.textContent = "正在生成朗读语音…";
+        const blob = await tts(text, apiKey, voiceSelect.value);
+        const url = URL.createObjectURL(blob);
+        audioPlayer.src = url;
+        statusDiv.textContent = "✅ 生成完成，可以播放语音啦！";
+      } catch (err) {
+        alert("出错了：" + (err?.message || err));
+        statusDiv.textContent = "❌ 生成失败。你可以开启“使用浏览器免费朗读”先听预览。";
+      }
+    });
+  </script>
+</body>
 </html>
