@@ -37,24 +37,33 @@
   <div class="wrap">
     <h1>🎧 英文朗读 + 中英同步（OpenAI / ElevenLabs / 浏览器）</h1>
 
-    <div class="card">
+    <div class=\"card\">
       <label>OpenAI API Key（用于翻译；也可用于 OpenAI TTS，可留空）</label>
-      <input id="openaiKey" type="password" placeholder="sk-...（仅保存在本地浏览器）" />
-      <small>不开启翻译或 OpenAI TTS 时，可以不填。浏览器朗读不消耗额度。</small>
+      <div class=\"row\">
+        <input id=\"openaiKey\" type=\"password\" placeholder=\"sk-...（仅保存在本地浏览器）\" />
+        <div class=\"flex between\">
+          <small>不开启翻译或 OpenAI TTS 时，可以不填。浏览器朗读不消耗额度。</small>
+          <button id=\"saveKeys\" class=\"btn outline\">保存设置</button>
+        </div>
+        <div id=\"saveHint\" style=\"display:none;color:#16a34a;font-size:12px\">已保存到本地 ✓</div>
+      </div>
     </div>
 
     <div class="card">
-      <div class="row grid-2">
+      <div class=\"row grid-2\">
         <div>
           <label>ElevenLabs API Key（启用 ElevenLabs 模式时必填）</label>
-          <input id="xiKey" type="password" placeholder="xi-...（仅本地保存）" />
+          <input id=\"xiKey\" type=\"password\" placeholder=\"xi-...（仅本地保存）\" />
         </div>
         <div>
           <label>ElevenLabs Voice ID（示例：Rachel → 21m00Tcm4TlvDq8ikWAM）</label>
-          <input id="xiVoice" placeholder="21m00Tcm4TlvDq8ikWAM" value="21m00Tcm4TlvDq8ikWAM" />
+          <input id=\"xiVoice\" placeholder=\"21m00Tcm4TlvDq8ikWAM\" value=\"21m00Tcm4TlvDq8ikWAM\" />
         </div>
       </div>
-      <small>提示：ElevenLabs 有每月 10,000 字符免费额度（视官方政策而定），更适合长文。</small>
+      <div class=\"flex between\">
+        <small>提示：ElevenLabs 有每月 10,000 字符免费额度（视官方政策而定），更适合长文。</small>
+        <button id=\"clearKeys\" class=\"btn outline\">清除本地密钥</button>
+      </div>
     </div>
 
     <div class="card">
@@ -129,12 +138,26 @@
     const charCount=$('charCount');
 
     // —— LocalStorage ——
-    openaiKeyEl.value=localStorage.getItem('openaiKey')||'';
-    xiKeyEl.value=localStorage.getItem('xiKey')||'';
-    xiVoiceEl.value=localStorage.getItem('xiVoice')||xiVoiceEl.value;
-    openaiKeyEl.addEventListener('input',()=>localStorage.setItem('openaiKey',openaiKeyEl.value.trim()));
-    xiKeyEl.addEventListener('input',()=>localStorage.setItem('xiKey',xiKeyEl.value.trim()));
-    xiVoiceEl.addEventListener('input',()=>localStorage.setItem('xiVoice',xiVoiceEl.value.trim()));
+    try{
+      openaiKeyEl.value=localStorage.getItem('openaiKey')||'';
+      xiKeyEl.value=localStorage.getItem('xiKey')||'';
+      xiVoiceEl.value=localStorage.getItem('xiVoice')||xiVoiceEl.value;
+    }catch(e){console.warn('localStorage 不可用：',e)}
+
+    $('saveKeys').addEventListener('click',()=>{
+      try{
+        localStorage.setItem('openaiKey',openaiKeyEl.value.trim());
+        localStorage.setItem('xiKey',xiKeyEl.value.trim());
+        localStorage.setItem('xiVoice',xiVoiceEl.value.trim());
+        const hint=$('saveHint'); hint.style.display='block'; setTimeout(()=>hint.style.display='none',1600);
+      }catch(e){ alert('无法保存：浏览器禁止了本地存储或处于隐私模式'); }
+    });
+    $('clearKeys').addEventListener('click',()=>{
+      try{ localStorage.removeItem('openaiKey'); localStorage.removeItem('xiKey'); localStorage.removeItem('xiVoice');
+        openaiKeyEl.value=''; xiKeyEl.value='';
+        const hint=$('saveHint'); hint.textContent='已清除本地密钥'; hint.style.display='block'; setTimeout(()=>{hint.textContent='已保存到本地 ✓'; hint.style.display='none'},1600);
+      }catch(e){ alert('清除失败：'+e) }
+    });
 
     // —— Helpers ——
     const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
@@ -213,7 +236,13 @@
 
     // —— Prepare (split & translate) ——
     prep.addEventListener('click',async()=>{
+      if(!inputEn.value.trim()){ alert('请先粘贴英文内容'); return; }
       EN=splitSentences(inputEn.value);
+      if(EN.length===0){ alert('没有检测到完整句子（请检查英文句尾是否有 . ? !）'); return; }
+      ZH=new Array(EN.length).fill('');
+      currentIndex=0; renderCols(); highlight(0);
+      try{ ZH=await translateBySentence(EN); renderCols(); highlight(0);}catch(e){console.error(e)}
+    });
       ZH=new Array(EN.length).fill('');
       currentIndex=0; renderCols(); highlight(0);
       try{ ZH=await translateBySentence(EN); renderCols(); highlight(0);}catch(e){console.error(e)}
@@ -224,6 +253,14 @@
 
     // —— Engines ——
     async function speakFrom(start){
+      if(!EN.length){ alert('还没有句子可读，请先“拆句 & 翻译”'); return; }
+      if(engine.value!=='browser'){
+        // 非浏览器引擎要求必须手动点击保存过 Key，避免输入框丢失
+        if(engine.value==='openai' && !openaiKeyEl.value.trim()) return alert('OpenAI 模式需要 OpenAI Key');
+        if(engine.value==='eleven' && !xiKeyEl.value.trim()) return alert('ElevenLabs 模式需要 ElevenLabs Key');
+      }
+      isSpeaking=true; showProgress(engine.value!=='browser');
+      try{
       if(!EN.length) return;
       const eng=engine.value; isSpeaking=true; showProgress(eng!=='browser');
       try{
@@ -303,7 +340,10 @@
     function setBar(p){ bar.style.width=p+'%'; }
 
     // —— Start from current highlighted ——
-    playFromCurrent.addEventListener('click',()=> speakFrom(currentIndex));
+    playFromCurrent.addEventListener('click',()=>{
+      if(!EN.length){ alert('还没有拆句，请先点击“拆句 & 翻译”'); return; }
+      speakFrom(currentIndex);
+    });
 
     // —— Test speak ——
     $('testSpeak').addEventListener('click', async ()=>{
