@@ -1,545 +1,298 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
-import { Upload, Mic, Play, Square, Volume2, FileText, Wand2, Languages } from "lucide-react";
-import mammoth from "mammoth"; // docx -> text
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>英文朗读 + 中英同步（三引擎）</title>
+  <style>
+    :root{--c:#2563eb;--g:#10b981;--b:#0ea5e9;--bg:#f8fafc;--txt:#0f172a}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--txt); margin:0;}
+    .wrap{max-width:1100px;margin:auto;padding:24px}
+    h1{display:flex;align-items:center;gap:10px;font-size:22px;color:var(--c)}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 4px rgba(0,0,0,.05)}
+    .row{display:grid;gap:12px}
+    @media(min-width:800px){.grid-2{grid-template-columns:1fr 1fr}}
+    label{font-weight:600}
+    input,textarea,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px}
+    textarea{min-height:140px}
+    small{color:#64748b}
+    .btn{background:var(--c);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
+    .btn.outline{background:#fff;color:var(--txt);border:1px solid #cbd5e1}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .flex{display:flex;align-items:center;gap:10px}
+    .between{justify-content:space-between}
+    .pill{display:inline-block;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:999px;padding:3px 10px;font-size:12px}
+    .cols{display:grid;gap:10px}
+    @media(min-width:900px){.cols{grid-template-columns:1fr 1fr}}
+    .sent{padding:10px;border:1px solid transparent;border-radius:10px;cursor:pointer}
+    .sent:hover{background:#f8fafc;border-color:#e2e8f0}
+    .sent.active{background:#eef2ff;border-color:#a5b4fc;font-weight:600;color:#4338ca}
+    .sent-zh.active{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .progress{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+    .bar{height:100%;background:var(--b);width:0}
+    .slider{width:220px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🎧 英文朗读 + 中英同步（OpenAI / ElevenLabs / 浏览器）</h1>
 
-/**
- * 🔊 OpenAI 文档朗读 + 自动翻译（前端网页小程序）
- * - 粘贴英文文本或上传 .docx 英文文档
- * - 一键调用 OpenAI TTS（gpt-4o-mini-tts）生成语音并播放
- * - 可选：自动翻译成中文，展示在下方
- * - 纯前端演示版：可在本地或静态站点部署（注意：生产环境请走后端代理，勿暴露 API Key）
- */
+    <div class="card">
+      <label>OpenAI API Key（用于翻译；也可用于 OpenAI TTS，可留空）</label>
+      <input id="openaiKey" type="password" placeholder="sk-...（仅保存在本地浏览器）" />
+      <small>不开启翻译或 OpenAI TTS 时，可以不填。浏览器朗读不消耗额度。</small>
+    </div>
 
-// —— 可根据需要调整 ——
-const TTS_MODEL = "gpt-4o-mini-tts"; // 语音合成模型
-const CHAT_MODEL = "gpt-4o-mini";    // 文本翻译/润色模型
-const DEFAULT_VOICE = "alloy";        // 可选：alloy | verse | luna | shimmer | coral
-const MAX_CHARS = 4000;               // 单次合成建议字符上限（避免超长导致失败）               // 单次合成建议字符上限（避免超长导致失败）
+    <div class="card">
+      <div class="row grid-2">
+        <div>
+          <label>ElevenLabs API Key（启用 ElevenLabs 模式时必填）</label>
+          <input id="xiKey" type="password" placeholder="xi-...（仅本地保存）" />
+        </div>
+        <div>
+          <label>ElevenLabs Voice ID（示例：Rachel → 21m00Tcm4TlvDq8ikWAM）</label>
+          <input id="xiVoice" placeholder="21m00Tcm4TlvDq8ikWAM" value="21m00Tcm4TlvDq8ikWAM" />
+        </div>
+      </div>
+      <small>提示：ElevenLabs 有每月 10,000 字符免费额度（视官方政策而定），更适合长文。</small>
+    </div>
 
-export default function OpenAITTSApp() {
-  const [apiKey, setApiKey] = useState("");
-  const [mode, setMode] = useState<"paste" | "file">("paste");
-  const [text, setText] = useState("");
-  const [voice, setVoice] = useState<string>(DEFAULT_VOICE);
-  const [autoTranslate, setAutoTranslate] = useState<boolean>(true);
-  const [translation, setTranslation] = useState<string>("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [audioUrls, setAudioUrls] = useState<string[]>([]); // 多段音频的 URL 列表
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [statusText, setStatusText] = useState("");
-  const [useFreeTTS, setUseFreeTTS] = useState(false); // 不走额度：使用浏览器内置朗读
-  // —— ElevenLabs 接入 ——
-  const [useElevenLabs, setUseElevenLabs] = useState(false); // 经济模式：使用 ElevenLabs
-  const [elevenKey, setElevenKey] = useState("");
-  const [elevenVoiceId, setElevenVoiceId] = useState("21m00Tcm4TlvDq8ikWAM"); // 示例：Rachel（官方示例ID）
+    <div class="card">
+      <label>英文内容（粘贴或上传 .docx）</label>
+      <textarea id="inputEn" placeholder="Paste your English text here..."></textarea>
+      <div class="flex between">
+        <div class="flex">
+          <input type="file" id="docx" accept=".docx" />
+          <span id="charCount" class="pill">0 chars</span>
+        </div>
+        <div class="flex">
+          <label for="translateChk">自动翻译中文</label>
+          <input id="translateChk" type="checkbox" checked />
+        </div>
+      </div>
+      <div style="margin-top:10px" class="flex between">
+        <div class="flex">
+          <label>朗读引擎：</label>
+          <select id="engine">
+            <option value="browser">浏览器（免费）</option>
+            <option value="openai">OpenAI TTS</option>
+            <option value="eleven">ElevenLabs</option>
+          </select>
+        </div>
+        <div class="flex">
+          <label>速度：<span id="rateVal">1.00x</span></label>
+          <input id="rate" class="slider" type="range" min="0.6" max="1.4" step="0.05" value="1.0" />
+        </div>
+      </div>
+      <div class="flex" style="margin-top:10px">
+        <button id="prep" class="btn">拆句 & 翻译</button>
+        <button id="playFromCurrent" class="btn">从当前句开始朗读</button>
+        <button id="stop" class="btn outline">停止</button>
+      </div>
+      <div id="status" style="margin-top:8px;color:#334155"></div>
+      <div class="progress" style="margin-top:8px;display:none"><div class="bar" id="bar"></div></div>
+    </div>
 
-  useEffect(() => {
-    const saved = localStorage.getItem("openai_api_key");
-    if (saved) setApiKey(saved);
-  }, []);
-
-  useEffect(() => {
-    if (apiKey) localStorage.setItem("openai_api_key", apiKey);
-  }, [apiKey]);
-
-  useEffect(() => {
-    // 自动连播：当前音频结束后播放下一段
-    const el = audioRef.current;
-    if (!el) return;
-    const onEnded = () => {
-      if (currentIndex < audioUrls.length - 1) {
-        setCurrentIndex((i) => i + 1);
-      }
-    };
-    el.addEventListener("ended", onEnded);
-    return () => el.removeEventListener("ended", onEnded);
-  }, [audioUrls, currentIndex]);
-
-  useEffect(() => {
-    // 切换音频源后自动播放
-    if (audioRef.current && audioUrls[currentIndex]) {
-      audioRef.current.src = audioUrls[currentIndex];
-      audioRef.current.play().catch(() => {});
-    }
-  }, [currentIndex, audioUrls]);
-
-  const chunks = useMemo(() => chunkText(text, MAX_CHARS), [text]);
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".docx")) {
-      alert("请上传 .docx 英文文件");
-      return;
-    }
-    const arrayBuffer = await file.arrayBuffer();
-    const { value } = await mammoth.extractRawText({ arrayBuffer });
-    setText(value.trim());
-    setMode("paste");
-  }
-
-  async function translateToChinese(src: string): Promise<string> {
-    try {
-      setStatusText("正在翻译成中文…");
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: CHAT_MODEL,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a professional translator. Translate the user\'s English text into natural, fluent Simplified Chinese. Keep meaning accurate. Preserve numbers and names. Do not add commentary.",
-            },
-            { role: "user", content: src },
-          ],
-          temperature: 0.2,
-        }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      return data.choices?.[0]?.message?.content?.trim?.() ?? "";
-    } catch (e: any) {
-      console.error(e);
-      alert("翻译失败：" + (e?.message || e));
-      return "";
-    } finally {
-      setStatusText("");
-    }
-  }
-
-  async function ttsOneChunk(chunk: string): Promise<Blob> {
-    const body = {
-      model: TTS_MODEL,
-      voice,
-      input: chunk,
-      format: "mp3",
-    } as const;
-
-    const res = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const t = await res.text();
-      // 额度不足等错误时，把信息抛出去，外层可回退到免费朗读
-      try {
-        const j = JSON.parse(t);
-        if (j?.error?.code === "insufficient_quota" || j?.error?.type === "insufficient_quota") {
-          throw new Error("额度不足（insufficient_quota）：请在 Billing 里添加付款方式或提高 Monthly budget，或切换‘使用浏览器免费朗读’/‘ElevenLabs’。");
-        }
-        throw new Error(j?.error?.message || t);
-      } catch (_) {
-        throw new Error(t);
-      }
-    }
-    const arrayBuffer = await res.arrayBuffer();
-    return new Blob([arrayBuffer], { type: "audio/mpeg" });
-  }
-
-  // ElevenLabs：逐段 TTS（返回 Blob）
-  async function elevenLabsTtsOneChunk(chunk: string): Promise<Blob> {
-    if (!elevenKey) throw new Error("请先填写 ElevenLabs API Key");
-    if (!elevenVoiceId) throw new Error("请填写 ElevenLabs Voice ID");
-
-    const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(elevenVoiceId)}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "xi-api-key": elevenKey,
-        "Content-Type": "application/json",
-        "accept": "audio/mpeg",
-      },
-      body: JSON.stringify({
-        text: chunk,
-        model_id: "eleven_turbo_v2",
-        voice_settings: { stability: 0.5, similarity_boost: 0.8 }
-      })
-    });
-    if (!res.ok) throw new Error(await res.text());
-    const buf = await res.arrayBuffer();
-    return new Blob([buf], { type: "audio/mpeg" });
-  }
-  // 免费朗读（不消耗 OpenAI 额度），音质一般但够用
-  function freeSpeak(text: string) {
-    if (!("speechSynthesis" in window)) {
-      throw new Error("当前浏览器不支持内置朗读（speechSynthesis）。请使用 Chrome/Edge/Safari 试试。");
-    }
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-US";
-    u.rate = 1.0; // 语速：0.1~10
-    u.pitch = 1.0; // 音高：0~2
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
-  }
-
-  async function handleGenerate() {
-    // 关键参数检查
-    if (!text.trim()) {
-      alert("请先粘贴英文内容或上传文档");
-      return;
-    }
-    if (autoTranslate && !apiKey) {
-      const ok = confirm("你开启了自动翻译，但未填写 OpenAI Key。是否先关闭翻译继续？");
-      if (!ok) return;
-      setAutoTranslate(false);
-    }
-    if (!useFreeTTS && !useElevenLabs && !apiKey) {
-      alert("当前选择 OpenAI TTS，请填写 OpenAI API Key，或切换到浏览器/ElevenLabs 模式");
-      return;
-    }
-    if (useElevenLabs && !elevenKey) {
-      alert("当前选择 ElevenLabs，请填写 ElevenLabs API Key");
-      return;
-    }
-
-    setIsGenerating(true);
-    setAudioUrls([]);
-    setCurrentIndex(0);
-    setProgress(0);
-    setTranslation("");
-
-    try {
-      // 1) 可选：自动翻译
-      if (autoTranslate && apiKey) {
-        const zh = await translateToChinese(text);
-        setTranslation(zh);
-      }
-
-      // 2) 根据模式生成/播放
-      if (useFreeTTS) {
-        setStatusText("使用浏览器内置朗读中（不消耗额度）…");
-        freeSpeak(text);
-        return;
-      }
-
-      const blobs: Blob[] = [];
-      for (let i = 0; i < chunks.length; i++) {
-        setStatusText(`正在合成语音（${i + 1}/${chunks.length}）…`);
-        const b = useElevenLabs ? await elevenLabsTtsOneChunk(chunks[i]) : await ttsOneChunk(chunks[i]);
-        blobs.push(b);
-        setProgress(Math.round(((i + 1) / chunks.length) * 100));
-      }
-
-      const urls = blobs.map((b) => URL.createObjectURL(b));
-      setAudioUrls(urls);
-      setStatusText("合成完成，可以播放或逐段下载");
-    } catch (e: any) {
-      console.error(e);
-      alert("生成失败：" + (e?.message || e));
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-    if (!text.trim()) {
-      alert("请先粘贴英文内容或上传文档");
-      return;
-    }
-
-    setIsGenerating(true);
-    setAudioUrls([]);
-    setCurrentIndex(0);
-    setProgress(0);
-    setTranslation("");
-
-    try {
-      // 1) 可选：自动翻译
-      if (autoTranslate) {
-        const zh = await translateToChinese(text);
-        setTranslation(zh);
-      }
-
-      // 如果选择免费朗读，直接用浏览器播放并结束
-      if (useFreeTTS) {
-        setStatusText("使用浏览器内置朗读中（不消耗额度）…");
-        freeSpeak(text);
-        setIsGenerating(false);
-        return;
-      }
-
-      // 2) 文本分段并逐段合成
-      const blobs: Blob[] = [];
-      for (let i = 0; i < chunks.length; i++) {
-        setStatusText(`正在合成语音（${i + 1}/${chunks.length}）…`);
-        const b = await ttsOneChunk(chunks[i]);
-        blobs.push(b);
-        setProgress(Math.round(((i + 1) / chunks.length) * 100));
-      }
-
-      // 3) 生成可播放链接（每段一个）
-      const urls = blobs.map((b) => URL.createObjectURL(b));
-      setAudioUrls(urls);
-      setStatusText("合成完成，可以播放或逐段下载");
-    } catch (e: any) {
-      console.error(e);
-      alert("生成失败：" + (e?.message || e));
-    } finally {
-      setIsGenerating(false);
-    }
-  }
-
-  function handleStop() {
-    audioRef.current?.pause();
-  }
-
-  function handlePlayAll() {
-    if (audioUrls.length === 0) return;
-    setCurrentIndex(0);
-    if (audioRef.current) {
-      audioRef.current.src = audioUrls[0];
-      audioRef.current.play().catch(() => {});
-    }
-  }
-
-  function handleDownload(index: number) {
-    const url = audioUrls[index];
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `tts_part_${index + 1}.mp3`;
-    a.click();
-  }
-
-  return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-slate-50 to-white text-slate-800">
-      <div className="mx-auto max-w-5xl p-6 space-y-6">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Volume2 className="h-8 w-8 text-indigo-600" />
-            <h1 className="text-2xl md:text-3xl font-semibold">OpenAI 文档朗读 + 自动翻译</h1>
-          </div>
-        </header>
-
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-xl">1) 填写 OpenAI API Key</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-2">
-              <Label htmlFor="api">OpenAI API Key</Label>
-              <Input
-                id="api"
-                type="password"
-                placeholder="sk-...（仅保存在本地浏览器）"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value.trim())}
-              />
-              <p className="text-xs text-slate-500">提示：演示用途可直接在此粘贴 Key；生产环境请通过后端代理，避免在前端暴露密钥。</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-xl">2) 导入或粘贴英文内容</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Tabs value={mode} onValueChange={(v) => setMode(v as any)}>
-              <TabsList className="grid grid-cols-2 w-full">
-                <TabsTrigger value="paste">粘贴文本</TabsTrigger>
-                <TabsTrigger value="file">上传 .docx 文件</TabsTrigger>
-              </TabsList>
-              <TabsContent value="paste" className="space-y-3">
-                <Textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="把你的英文内容粘贴到这里…"
-                  className="min-h-[200px]"
-                />
-                <div className="text-xs text-slate-500 flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> 当前字数：{text.length}（将自动按 ~{MAX_CHARS} 字分段）
-                </div>
-              </TabsContent>
-              <TabsContent value="file" className="space-y-3">
-                <Label htmlFor="docx" className="flex items-center gap-2 cursor-pointer w-full p-6 border-2 border-dashed rounded-2xl hover:bg-slate-50">
-                  <Upload className="w-5 h-5" /> 点击或拖拽上传 .docx（英文文件）
-                </Label>
-                <Input id="docx" type="file" accept=".docx" className="hidden" onChange={handleFile} />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-xl">3) 朗读设置</CardTitle>
-          </CardHeader>
-          <CardContent className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>选择声音</Label>
-              <Select value={voice} onValueChange={setVoice}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择一个声音" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="alloy">Alloy（温暖自然）</SelectItem>
-                  <SelectItem value="luna">Luna（柔和女声）</SelectItem>
-                  <SelectItem value="verse">Verse（节奏鲜明）</SelectItem>
-                  <SelectItem value="shimmer">Shimmer（轻快年轻）</SelectItem>
-                  <SelectItem value="coral">Coral（低沉稳重）</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className=\"flex items-center justify-between rounded-xl border p-4\">
-              <div className=\"flex items-center gap-3\">
-                <Languages className=\"w-5 h-5 text-indigo-600\" />
-                <div>
-                  <div className=\"font-medium\">自动翻译成中文</div>
-                  <div className=\"text-xs text-slate-500\">生成语音前，先把英文全文翻成简体中文并展示（需 OpenAI Key）</div>
-                </div>
-              </div>
-              <Switch checked={autoTranslate} onCheckedChange={setAutoTranslate} />
-            </div>
-
-            <div className=\"flex items-center justify-between rounded-xl border p-4\">
-              <div className=\"flex items-center gap-3\">
-                <Volume2 className=\"w-5 h-5 text-green-600\" />
-                <div>
-                  <div className=\"font-medium\">使用浏览器免费朗读（不消耗额度）</div>
-                  <div className=\"text-xs text-slate-500\">不开启 OpenAI/ElevenLabs 时，改用浏览器内置语音，音质一般但足够预听</div>
-                </div>
-              </div>
-              <Switch checked={useFreeTTS} onCheckedChange={setUseFreeTTS} />
-            </div>
-
-            <div className=\"rounded-xl border p-4 space-y-3\">
-              <div className=\"font-medium mb-1\">ElevenLabs（经济模式，长文推荐）</div>
-              <div className=\"grid md:grid-cols-2 gap-3\">
-                <div>
-                  <Label>启用 ElevenLabs</Label>
-                  <div className=\"mt-2\"><Switch checked={useElevenLabs} onCheckedChange={setUseElevenLabs} /></div>
-                </div>
-                <div className=\"grid gap-1\">
-                  <Label>ElevenLabs API Key</Label>
-                  <Input type=\"password\" placeholder=\"xi-...\" value={elevenKey} onChange={(e)=>setElevenKey(e.target.value.trim())} />
-                </div>
-                <div className=\"grid gap-1\">
-                  <Label>Voice ID（例如 Rachel: 21m00Tcm4TlvDq8ikWAM）</Label>
-                  <Input placeholder=\"21m00Tcm4TlvDq8ikWAM\" value={elevenVoiceId} onChange={(e)=>setElevenVoiceId(e.target.value.trim())} />
-                </div>
-              </div>
-              <div className=\"text-xs text-slate-500\">说明：启用后将调用 ElevenLabs TTS，按字符计费；未填 Key 时无法使用。</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader>
-            <CardTitle className="text-xl">4) 一键朗读 & 翻译</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={handleGenerate} disabled={isGenerating || !text.trim() || !apiKey}>
-                <Mic className="w-4 h-4 mr-2" /> {isGenerating ? "合成中…" : "生成语音"}
-              </Button>
-              <Button variant="secondary" onClick={handlePlayAll} disabled={audioUrls.length === 0}>
-                <Play className="w-4 h-4 mr-2" /> 从头播放
-              </Button>
-              <Button variant="outline" onClick={handleStop} disabled={!audioRef.current}>
-                <Square className="w-4 h-4 mr-2" /> 停止播放
-              </Button>
-            </div>
-
-            {isGenerating && (
-              <div className="space-y-2">
-                <Progress value={progress} />
-                <div className="text-sm text-slate-600">{statusText}</div>
-              </div>
-            )}
-
-            {audioUrls.length > 0 && (
-              <div className="space-y-4">
-                <audio ref={audioRef} controls className="w-full" />
-                <div className="space-y-2">
-                  <div className="text-sm font-medium text-slate-600">分段音频（自动连播）：</div>
-                  <div className="grid gap-2">
-                    {audioUrls.map((u, i) => (
-                      <div key={i} className={`flex items-center justify-between rounded-lg border p-3 ${i === currentIndex ? "border-indigo-500 bg-indigo-50" : "border-slate-200"}`}>
-                        <div className="text-sm">第 {i + 1} 段</div>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant={i === currentIndex ? "default" : "secondary"} onClick={() => setCurrentIndex(i)}>
-                            <Play className="w-4 h-4 mr-1" /> 播放
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDownload(i)}>下载 MP3</Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {autoTranslate && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-slate-700">
-                  <Wand2 className="w-4 h-4" /> <span className="font-medium">中文译文</span>
-                </div>
-                <Textarea readOnly value={translation} className="min-h-[160px] bg-slate-50" />
-              </div>
-            )}
-
-            <div className="text-xs text-slate-500 leading-5">
-              📌 提示：为保证成功率，本工具会把超长文本按约 {MAX_CHARS} 字分段逐段合成并自动连播；如需导出为**单个文件**，建议在电脑端使用音频编辑器（如 Audacity）将多段 MP3 合并。
-            </div>
-          </CardContent>
-        </Card>
-
-        <footer className="text-center text-xs text-slate-400 py-6">
-          Made for 📣 NY Speak Easy · 本页仅作本地/演示用途。如需上线，请使用服务器代理 OpenAI API 并妥善保管密钥。
-        </footer>
+    <div class="card">
+      <div class="cols" style="max-height:60vh;overflow:auto">
+        <div id="enCol"></div>
+        <div id="zhCol"></div>
       </div>
     </div>
-  );
-}
+  </div>
 
-// —— 工具函数 ——
-function chunkText(input: string, maxChars: number): string[] {
-  const text = input.trim();
-  if (!text) return [];
-  if (text.length <= maxChars) return [text];
+  <audio id="player"></audio>
 
-  const sentences = text
-    .replace(/\n+/g, " ")
-    .split(/(?<=[.!?])\s+/);
+  <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
+  <script>
+    // —— DOM refs ——
+    const $ = (id)=>document.getElementById(id);
+    const openaiKeyEl=$('openaiKey');
+    const xiKeyEl=$('xiKey');
+    const xiVoiceEl=$('xiVoice');
+    const inputEn=$('inputEn');
+    const docx=$('docx');
+    const translateChk=$('translateChk');
+    const engine=$('engine');
+    const rate=$('rate');
+    const rateVal=$('rateVal');
+    const prep=$('prep');
+    const playFromCurrent=$('playFromCurrent');
+    const stopBtn=$('stop');
+    const statusEl=$('status');
+    const enCol=$('enCol');
+    const zhCol=$('zhCol');
+    const player=$('player');
+    const bar=$('bar');
+    const progressWrap=document.querySelector('.progress');
+    const charCount=$('charCount');
 
-  const chunks: string[] = [];
-  let current = "";
+    // —— LocalStorage ——
+    openaiKeyEl.value=localStorage.getItem('openaiKey')||'';
+    xiKeyEl.value=localStorage.getItem('xiKey')||'';
+    xiVoiceEl.value=localStorage.getItem('xiVoice')||xiVoiceEl.value;
+    openaiKeyEl.addEventListener('input',()=>localStorage.setItem('openaiKey',openaiKeyEl.value.trim()));
+    xiKeyEl.addEventListener('input',()=>localStorage.setItem('xiKey',xiKeyEl.value.trim()));
+    xiVoiceEl.addEventListener('input',()=>localStorage.setItem('xiVoice',xiVoiceEl.value.trim()));
 
-  for (const s of sentences) {
-    if ((current + (current ? " " : "") + s).length <= maxChars) {
-      current = current ? current + " " + s : s;
-    } else {
-      if (current) chunks.push(current);
-      if (s.length > maxChars) {
-        // 强拆长句
-        for (let i = 0; i < s.length; i += maxChars) {
-          chunks.push(s.slice(i, i + maxChars));
+    // —— Helpers ——
+    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+    const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+    rate.addEventListener('input',()=>{rateVal.textContent=Number(rate.value).toFixed(2)+'x'});
+    inputEn.addEventListener('input',()=>{charCount.textContent=(inputEn.value||'').length+" chars"});
+
+    // —— Split into sentences ——
+    function splitSentences(txt){
+      const cleaned=(txt||'').replace(/\s+/g,' ').trim();
+      if(!cleaned) return [];
+      return cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
+    }
+
+    // —— Render sentence columns ——
+    let EN=[], ZH=[], currentIndex=0, isSpeaking=false;
+    function renderCols(){
+      enCol.innerHTML=''; zhCol.innerHTML='';
+      EN.forEach((s,i)=>{
+        const d=document.createElement('div');
+        d.className='sent'+(i===currentIndex?' active':'');
+        d.textContent=s; d.onclick=()=>jumpTo(i);
+        d.dataset.idx=i; enCol.appendChild(d);
+        const z=document.createElement('div');
+        z.className='sent sent-zh'+(i===currentIndex?' active':'');
+        z.textContent=ZH[i]||''; zhCol.appendChild(z);
+      });
+    }
+    function highlight(i){
+      currentIndex=i;
+      [...enCol.children].forEach((el,idx)=>{
+        el.classList.toggle('active',idx===i);
+      });
+      [...zhCol.children].forEach((el,idx)=>{
+        el.classList.toggle('active',idx===i);
+      });
+      enCol.children[i]?.scrollIntoView({behavior:'smooth',block:'center'});
+      zhCol.children[i]?.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+
+    // —— File upload ——
+    docx.addEventListener('change',async(e)=>{
+      const f=e.target.files?.[0]; if(!f) return;
+      const buf=await f.arrayBuffer();
+      const {value}=await window.mammoth.extractRawText({arrayBuffer:buf});
+      inputEn.value=value.trim();
+      charCount.textContent=inputEn.value.length+" chars";
+    });
+
+    // —— Translate by sentence ——
+    async function translateBySentence(arr){
+      if(!translateChk.checked) return new Array(arr.length).fill('');
+      const key=openaiKeyEl.value.trim();
+      if(!key){ alert('开启了自动翻译，请先填写 OpenAI Key'); return new Array(arr.length).fill(''); }
+      statusEl.textContent='正在逐句翻译…';
+      const prompt='Translate each English sentence into Simplified Chinese. Return ONLY a JSON array of strings, same length and order as input. No commentary.';
+      const content=arr.map((s,i)=>`${i+1}. ${s}`).join('\n');
+      const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:prompt},{role:'user',content}],temperature:0.2})});
+      if(!res.ok){ statusEl.textContent='翻译失败'; throw new Error(await res.text()); }
+      const data=await res.json();
+      const out=data.choices?.[0]?.message?.content||'';
+      try{ const s=out.indexOf('['), e=out.lastIndexOf(']'); return JSON.parse(out.slice(s,e+1)).map(String); }
+      catch{ return out.split(/\n+/).map(x=>x.trim()); }
+      finally{ statusEl.textContent=''; }
+    }
+
+    // —— Prepare (split & translate) ——
+    prep.addEventListener('click',async()=>{
+      EN=splitSentences(inputEn.value);
+      ZH=new Array(EN.length).fill('');
+      currentIndex=0; renderCols(); highlight(0);
+      try{ ZH=await translateBySentence(EN); renderCols(); highlight(0);}catch(e){console.error(e)}
+    });
+
+    // —— Jump ——
+    function jumpTo(i){ highlight(i); speakFrom(i); }
+
+    // —— Engines ——
+    async function speakFrom(start){
+      if(!EN.length) return;
+      const eng=engine.value; isSpeaking=true; showProgress(eng!=='browser');
+      try{
+        if(eng==='browser'){
+          await speakBrowserFrom(start);
+        }else if(eng==='openai'){
+          await speakOpenAIFrom(start);
+        }else{
+          await speakElevenFrom(start);
         }
-        current = "";
-      } else {
-        current = s;
+      }catch(err){ alert('朗读出错：'+(err?.message||err)); }
+      finally{ isSpeaking=false; showProgress(false); }
+    }
+
+    // —— Browser speech ——
+    async function speakBrowserFrom(start){
+      if(!('speechSynthesis' in window)) throw new Error('当前浏览器不支持内置朗读');
+      window.speechSynthesis.cancel();
+      for(let i=start;i<EN.length;i++){
+        highlight(i);
+        const u=new SpeechSynthesisUtterance(EN[i]);
+        u.lang='en-US';
+        u.rate=clamp(parseFloat(rate.value),0.6,1.4);
+        await new Promise(res=>{ u.onend=res; u.onerror=res; speechSynthesis.speak(u); });
+        if(!isSpeaking) break;
       }
     }
-  }
-  if (current) chunks.push(current);
-  return chunks;
-}
+
+    // —— OpenAI sentence TTS ——
+    async function speakOpenAIFrom(start){
+      const key=openaiKeyEl.value.trim(); if(!key) throw new Error('请填写 OpenAI Key');
+      for(let i=start;i<EN.length;i++){
+        highlight(i); const url=await openaiTts(EN[i],key); await play(url);
+        setBar(((i-start+1)/(EN.length-start))*100);
+        if(!isSpeaking) break;
+      }
+    }
+    async function openaiTts(text,key){
+      const res=await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini-tts',voice:'alloy',input:text,format:'mp3'})});
+      if(!res.ok) throw new Error(await res.text());
+      const buf=await res.arrayBuffer(); const blob=new Blob([buf],{type:'audio/mpeg'}); return URL.createObjectURL(blob);
+    }
+
+    // —— ElevenLabs sentence TTS ——
+    async function speakElevenFrom(start){
+      const key=xiKeyEl.value.trim(); const vid=xiVoiceEl.value.trim();
+      if(!key||!vid) throw new Error('请填写 ElevenLabs Key 和 Voice ID');
+      for(let i=start;i<EN.length;i++){
+        highlight(i); const url=await elevenTts(EN[i],key,vid); await play(url);
+        setBar(((i-start+1)/(EN.length-start))*100);
+        if(!isSpeaking) break;
+      }
+    }
+    async function elevenTts(text,key,voiceId){
+      const url=`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`;
+      const res=await fetch(url,{method:'POST',headers:{'xi-api-key':key,'Content-Type':'application/json','accept':'audio/mpeg'},body:JSON.stringify({text,model_id:'eleven_turbo_v2',voice_settings:{stability:0.5,similarity_boost:0.8}})});
+      if(!res.ok) throw new Error(await res.text());
+      const buf=await res.arrayBuffer(); const blob=new Blob([buf],{type:'audio/mpeg'}); return URL.createObjectURL(blob);
+    }
+
+    // —— Player ——
+    function play(url){
+      return new Promise((resolve,reject)=>{
+        player.src=url; player.playbackRate=clamp(parseFloat(rate.value),0.6,1.4);
+        player.onended=()=>resolve(); player.onerror=(e)=>reject(e); player.play().catch(reject);
+      });
+    }
+
+    // —— Stop & progress ——
+    stopBtn.addEventListener('click',()=>{ isSpeaking=false; speechSynthesis?.cancel?.(); player.pause(); });
+    function showProgress(v){ progressWrap.style.display=v?'block':'none'; if(!v) setBar(0); }
+    function setBar(p){ bar.style.width=p+'%'; }
+
+    // —— Start from current highlighted ——
+    playFromCurrent.addEventListener('click',()=> speakFrom(currentIndex));
+
+    // 点击英文句子开始朗读
+    enCol.addEventListener('click',(e)=>{
+      const d=e.target.closest('.sent'); if(!d) return; const i=Number(d.dataset.idx); if(Number.isFinite(i)) speakFrom(i);
+    });
+  </script>
+</body>
+</html>
