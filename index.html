@@ -5,39 +5,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>英文朗读 + 中英同步（三引擎 + 美式音标）</title>
   <style>
-    :root{--c:#2563eb;--g:#10b981;--b:#0ea5e9;--bg:#f8fafc;--txt:#0f172a}
+    :root{
+      --c:#2563eb;--g:#10b981;--b:#0ea5e9;
+      --bg:#f8fafc;--txt:#0f172a;--muted:#64748b;
+      --card:#ffffff;--border:#e5e7eb;--shadow:0 2px 4px rgba(0,0,0,.05);
+      --chip-bg:#eef2ff;--chip-txt:#3730a3;--chip-bd:#c7d2fe;
+      --accent-soft:#eef2ff;--accent-bd:#a5b4fc;--accent-txt:#4338ca;
+      --green-soft:#ecfdf5;--green-bd:#a7f3d0;--green-txt:#065f46;
+    }
+    /* Dark mode */
+    .dark{
+      --bg:#0b1220;--txt:#e5e7eb;--muted:#9aa5b1;
+      --card:#0f172a;--border:#1f2937;--shadow:0 2px 10px rgba(0,0,0,.35);
+      --chip-bg:#112240;--chip-txt:#93c5fd;--chip-bd:#1d4ed8;
+      --accent-soft:#0b1a36;--accent-bd:#1d4ed8;--accent-txt:#93c5fd;
+      --green-soft:#052e2b;--green-bd:#0d9488;--green-txt:#99f6e4;
+    }
     *{box-sizing:border-box}
+    html,body{height:100%}
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);margin:0}
     .wrap{max-width:1100px;margin:auto;padding:24px}
-    h1{display:flex;align-items:center;gap:10px;font-size:22px;color:var(--c)}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 4px rgba(0,0,0,.05)}
+    h1{display:flex;align-items:center;gap:10px;font-size:22px;color:var(--c);margin:0 0 12px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin:12px 0;box-shadow:var(--shadow)}
     .row{display:grid;gap:12px}
     @media(min-width:800px){.grid-2{grid-template-columns:1fr 1fr}}
     label{font-weight:600}
-    input,textarea,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px}
+    input,textarea,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:transparent;color:inherit}
     textarea{min-height:140px}
-    small{color:#64748b}
+    small{color:var(--muted)}
     .btn{background:var(--c);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
-    .btn.outline{background:#fff;color:#0f172a;border:1px solid #cbd5e1}
+    .btn.outline{background:transparent;color:var(--txt);border:1px solid #cbd5e1}
     .btn:disabled{opacity:.5;cursor:not-allowed}
     .flex{display:flex;align-items:center;gap:10px}
     .between{justify-content:space-between}
-    .pill{display:inline-block;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:999px;padding:3px 10px;font-size:12px}
+    .pill{display:inline-block;background:var(--chip-bg);color:var(--chip-txt);border:1px solid var(--chip-bd);border-radius:999px;padding:3px 10px;font-size:12px}
     .cols{display:grid;gap:10px}
     @media(min-width:900px){.cols{grid-template-columns:1fr 1fr}}
-    .sent{padding:10px;border:1px solid transparent;border-radius:10px;cursor:pointer}
-    .sent:hover{background:#f8fafc;border-color:#e2e8f0}
-    .sent.active{background:#eef2ff;border-color:#a5b4fc;font-weight:600;color:#4338ca}
-    .sent-zh.active{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+    .sent{padding:10px;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:.15s}
+    .sent:hover{background:#0b0b0b08;border-color:#e2e8f0}
+    .dark .sent:hover{background:#ffffff10;border-color:#243041}
+    .sent.active{background:var(--accent-soft);border-color:var(--accent-bd);font-weight:600;color:var(--accent-txt)}
+    .sent-zh.active{background:var(--green-soft);border-color:var(--green-bd);color:var(--green-txt)}
     .ipa{font-size:12px;color:#475569;margin-top:4px}
     .progress{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
     .bar{height:100%;background:var(--b);width:0}
     .slider{width:220px}
     .note{font-size:12px;color:#0f766e}
+
+    /* ——— Theme toggle button ——— */
+    .toolbar{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-bottom:8px}
+    .toggle-theme{background:transparent;border:1px solid var(--border);color:var(--txt);padding:8px 12px;border-radius:10px;cursor:pointer}
+
+    /* ——— Study widget ——— */
+    .study{position:fixed;right:18px;bottom:18px;max-width:360px;z-index:50}
+    .study .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .study .title{font-weight:700}
+    .study .compact{display:flex;gap:10px;flex-wrap:wrap}
+    .study .kpi{display:flex;gap:6px;align-items:baseline;background:var(--chip-bg);border:1px solid var(--chip-bd);color:var(--chip-txt);padding:6px 10px;border-radius:999px}
+    .study .kpi .num{font-weight:800}
+    .study .detail{display:none;margin-top:10px}
+    .study.open .detail{display:block}
+    .study .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .study .box{padding:10px;border:1px solid var(--border);border-radius:10px}
+    .study .label{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
   <div class="wrap">
+    <div class="toolbar">
+      <button id="themeBtn" class="toggle-theme" title="切换黑/白模式">🌙 深色</button>
+    </div>
     <h1>🎧 英文朗读 + 中英同步（OpenAI / ElevenLabs / 浏览器）</h1>
 
     <!-- Keys -->
@@ -125,6 +162,27 @@
     </div>
   </div>
 
+  <!-- Study widget (WeChat Reading–style) -->
+  <div id="studyWidget" class="card study">
+    <div class="hdr">
+      <div class="title">⏱ 学习时长</div>
+      <button id="toggleDetail" class="btn outline" style="padding:6px 10px;font-size:12px">查看详情</button>
+    </div>
+    <div class="compact">
+      <div class="kpi"><span>本次</span><span class="num" id="kThis">00:00:00</span></div>
+      <div class="kpi"><span>总计</span><span class="num" id="kTotal">0小时0分钟</span></div>
+    </div>
+    <div class="detail">
+      <div class="grid" style="margin-top:8px">
+        <div class="box"><div class="label">今天</div><div id="kDay">0分钟</div></div>
+        <div class="box"><div class="label">本周（周一-周日）</div><div id="kWeek">0分钟</div></div>
+        <div class="box"><div class="label">本月</div><div id="kMonth">0分钟</div></div>
+        <div class="box"><div class="label">今年</div><div id="kYear">0分钟</div></div>
+      </div>
+      <div style="margin-top:8px" class="label">数据保存在浏览器 localStorage（按自然日累计，切换深色模式与本地时间自动适配）。</div>
+    </div>
+  </div>
+
   <audio id="player"></audio>
 
   <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
@@ -155,30 +213,67 @@
     const charCount=$('charCount');
     const diag=$('diag');
 
-    // --------- localStorage ---------
+    // Theme elements
+    const themeBtn = $('themeBtn');
+
+    // Study widget elements
+    const studyCard = $('studyWidget');
+    const btnDetail = $('toggleDetail');
+    const kThis = $('kThis');
+    const kTotal = $('kTotal');
+    const kDay = $('kDay');
+    const kWeek = $('kWeek');
+    const kMonth = $('kMonth');
+    const kYear = $('kYear');
+
+    // --------- localStorage (keys) ---------
+    const LS_KEYS = {
+      OPENAI:'openaiKey', XI:'xiKey', XIVOICE:'xiVoice',
+      THEME:'study:theme',
+      DAILY:'study:dailySeconds' // JSON: { 'YYYY-MM-DD': seconds }
+    };
+
+    // Init stored keys
     try{
-      openaiKeyEl.value=localStorage.getItem('openaiKey')||'';
-      xiKeyEl.value=localStorage.getItem('xiKey')||'';
-      xiVoiceEl.value=localStorage.getItem('xiVoice')||xiVoiceEl.value;
+      openaiKeyEl.value=localStorage.getItem(LS_KEYS.OPENAI)||'';
+      xiKeyEl.value=localStorage.getItem(LS_KEYS.XI)||'';
+      xiVoiceEl.value=localStorage.getItem(LS_KEYS.XIVOICE)||xiVoiceEl.value;
     }catch(e){console.warn('localStorage 不可用：',e)}
 
     $('saveKeys').addEventListener('click',()=>{
       try{
-        const ok=openaiKeyEl.value.trim().replace(/^["']|["']$/g,'');
-        const xk=xiKeyEl.value.trim().replace(/^["']|["']$/g,'');
-        const xv=xiVoiceEl.value.trim().replace(/^["']|["']$/g,'');
-        localStorage.setItem('openaiKey',ok);
-        localStorage.setItem('xiKey',xk);
-        localStorage.setItem('xiVoice',xv);
+        const ok=openaiKeyEl.value.trim().replace(/^[["\']]|[["\']]$/g,'');
+        const xk=xiKeyEl.value.trim().replace(/^[["\']]|[["\']]$/g,'');
+        const xv=xiVoiceEl.value.trim().replace(/^[["\']]|[["\']]$/g,'');
+        localStorage.setItem(LS_KEYS.OPENAI,ok);
+        localStorage.setItem(LS_KEYS.XI,xk);
+        localStorage.setItem(LS_KEYS.XIVOICE,xv);
         openaiKeyEl.value=ok; xiKeyEl.value=xk; xiVoiceEl.value=xv;
         const hint=$('saveHint'); hint.style.display='block'; setTimeout(()=>hint.style.display='none',1600);
       }catch(e){ alert('无法保存：浏览器禁止了本地存储或处于隐私模式'); }
     });
     $('clearKeys').addEventListener('click',()=>{
-      try{ localStorage.removeItem('openaiKey'); localStorage.removeItem('xiKey'); localStorage.removeItem('xiVoice');
+      try{ localStorage.removeItem(LS_KEYS.OPENAI); localStorage.removeItem(LS_KEYS.XI); localStorage.removeItem(LS_KEYS.XIVOICE);
         openaiKeyEl.value=''; xiKeyEl.value='';
         const hint=$('saveHint'); hint.textContent='已清除本地密钥'; hint.style.display='block'; setTimeout(()=>{hint.textContent='已保存到本地 ✓'; hint.style.display='none'},1600);
       }catch(e){ alert('清除失败：'+e) }
+    });
+
+    // --------- Theme (Dark/Light) ---------
+    function applyTheme(theme){
+      document.body.classList.toggle('dark', theme==='dark');
+      themeBtn.textContent = theme==='dark' ? '☀️ 浅色' : '🌙 深色';
+      localStorage.setItem(LS_KEYS.THEME, theme);
+    }
+    (function initTheme(){
+      const saved = localStorage.getItem(LS_KEYS.THEME);
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = saved || (prefersDark ? 'dark' : 'light');
+      applyTheme(theme);
+    })();
+    themeBtn.addEventListener('click',()=>{
+      const current = document.body.classList.contains('dark') ? 'dark' : 'light';
+      applyTheme(current==='dark' ? 'light' : 'dark');
     });
 
     // --------- helpers ---------
@@ -277,7 +372,7 @@
       try{ ZH=await translateBySentence(EN); PH=await ipaBySentence(EN); renderCols(); highlight(0);}catch(e){console.error(e)}
     });
 
-    // --------- engines (unchanged) ---------
+    // --------- engines ---------
     async function speakFrom(start){
       const eng=engine.value;
       if(eng==='browser' && EN.length===0){
@@ -355,6 +450,83 @@
     testSpeak.addEventListener('click', async ()=>{
       try{ await ensureVoicesLoaded(); speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance("Hello from your browser! Testing testing."); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4); speechSynthesis.speak(u);}catch(e){ alert('测试朗读失败：'+(e?.message||e)); }
     });
+
+    // =====================
+    // WeChat Reading–style study timer & stats
+    // =====================
+    function todayStr(d=new Date()){
+      const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${dd}`;
+    }
+    function getMonday(d){
+      const x=new Date(d); const day=(x.getDay()+6)%7; // Mon=0
+      x.setHours(0,0,0,0); x.setDate(x.getDate()-day); return x;
+    }
+    function endOfWeek(d){ const m=getMonday(d); const e=new Date(m); e.setDate(m.getDate()+6); return e; }
+    function startOfMonth(d){ const x=new Date(d.getFullYear(), d.getMonth(), 1); return x; }
+    function endOfMonth(d){ const x=new Date(d.getFullYear(), d.getMonth()+1, 0); return x; }
+    function startOfYear(d){ return new Date(d.getFullYear(),0,1); }
+    function endOfYear(d){ return new Date(d.getFullYear(),11,31); }
+
+    function loadDaily(){
+      try{ const raw=localStorage.getItem(LS_KEYS.DAILY); if(!raw) return {}; const obj=JSON.parse(raw); return obj&&typeof obj==='object'?obj:{} }catch{ return {} }
+    }
+    function saveDaily(map){ try{ localStorage.setItem(LS_KEYS.DAILY, JSON.stringify(map)); }catch(e){ console.warn('保存统计失败',e) } }
+
+    function fmtHMS(sec){ sec=Math.max(0,Math.floor(sec)); const h=Math.floor(sec/3600); const m=Math.floor((sec%3600)/60); const s=sec%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` }
+    function fmtHMfromSec(sec){ sec=Math.max(0,Math.floor(sec)); const h=Math.floor(sec/3600); const m=Math.floor((sec%3600)/60); return `${h}小时${m}分钟`; }
+    function minutesStr(sec){ const m=Math.round(sec/60); return `${m}分钟`; }
+
+    let daily = loadDaily();
+    let sessionSeconds = 0; // 本次
+    let tickTimer = null;
+    let visible = document.visibilityState === 'visible';
+
+    function sumRange(startDate,endDate){
+      const s=new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+      const e=new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      let cur=new Date(s); let total=0;
+      while(cur<=e){ total += (daily[todayStr(cur)]||0); cur.setDate(cur.getDate()+1); }
+      return total;
+    }
+    function totalAll(){ return Object.values(daily).reduce((a,b)=>a+(+b||0),0); }
+
+    function renderStats(){
+      const now=new Date();
+      kThis.textContent = fmtHMS(sessionSeconds);
+      kTotal.textContent = fmtHMfromSec(totalAll());
+      kDay.textContent = minutesStr(daily[todayStr(now)]||0);
+      kWeek.textContent = minutesStr(sumRange(getMonday(now), endOfWeek(now)));
+      kMonth.textContent = minutesStr(sumRange(startOfMonth(now), endOfMonth(now)));
+      kYear.textContent = minutesStr(sumRange(startOfYear(now), endOfYear(now)));
+    }
+
+    function tick(){
+      if(!visible) return; // 仅前台计时
+      sessionSeconds += 1;
+      const key = todayStr(new Date());
+      daily[key] = (daily[key]||0) + 1; // 按自然日累计秒数
+    }
+
+    function startCounting(){
+      if(tickTimer) clearInterval(tickTimer);
+      tickTimer = setInterval(()=>{ tick(); if(sessionSeconds % 2 === 0) renderStats(); if(sessionSeconds % 10 === 0) saveDaily(daily); }, 1000);
+      renderStats();
+    }
+
+    document.addEventListener('visibilitychange',()=>{ visible = document.visibilityState === 'visible'; });
+    window.addEventListener('focus',()=>{ visible=true; });
+    window.addEventListener('blur',()=>{ visible=false; });
+    window.addEventListener('beforeunload',()=>{ saveDaily(daily); });
+
+    // Detail toggle
+    btnDetail.addEventListener('click',()=>{
+      studyCard.classList.toggle('open');
+      btnDetail.textContent = studyCard.classList.contains('open') ? '收起' : '查看详情';
+    });
+
+    // Kick off counting
+    startCounting();
   </script>
 </body>
 </html>
