@@ -13,68 +13,191 @@
       --accent-soft:#eef2ff;--accent-bd:#a5b4fc;--accent-txt:#4338ca;
       --green-soft:#ecfdf5;--green-bd:#a7f3d0;--green-txt:#065f46;
     }
-    /* Dark mode */
+    /* 深色模式变量 */
     .dark{
-      --bg:#0b1220;--txt:#e5e7eb;--muted:#9aa5b1;
-      --card:#0f172a;--border:#1f2937;--shadow:0 2px 10px rgba(0,0,0,.35);
-      --chip-bg:#112240;--chip-txt:#93c5fd;--chip-bd:#1d4ed8;
-      --accent-soft:#0b1a36;--accent-bd:#1d4ed8;--accent-txt:#93c5fd;
-      --green-soft:#052e2b;--green-bd:#0d9488;--green-txt:#99f6e4;
+      --bg:#020617;--txt:#e5e7eb;--muted:#9ca3af;
+      --card:#020617;--border:#1f2937;--shadow:0 2px 10px rgba(0,0,0,.35);
+      --chip-bg:#0b1120;--chip-txt:#93c5fd;--chip-bd:#1d4ed8;
+      --accent-soft:#0b1220;--accent-bd:#1d4ed8;--accent-txt:#93c5fd;
+      --green-soft:#022c22;--green-bd:#0d9488;--green-txt:#99f6e4;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--txt);margin:0}
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--txt);
+      margin:0;
+    }
     .wrap{max-width:1100px;margin:auto;padding:24px}
-    h1{display:flex;align-items:center;gap:10px;font-size:22px;color:var(--c);margin:0 0 12px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin:12px 0;box-shadow:var(--shadow)}
+    h1{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:22px;
+      color:var(--c);
+      margin:0 0 12px;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+      margin:12px 0;
+      box-shadow:var(--shadow);
+    }
     .row{display:grid;gap:12px}
     @media(min-width:800px){.grid-2{grid-template-columns:1fr 1fr}}
     label{font-weight:600}
-    input,textarea,select{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;background:transparent;color:inherit}
+    input,textarea,select{
+      width:100%;
+      padding:10px;
+      border:1px solid #cbd5e1;
+      border-radius:10px;
+      font-size:14px;
+      background:transparent;
+      color:inherit;
+    }
     textarea{min-height:140px}
     small{color:var(--muted)}
-    .btn{background:var(--c);color:#fff;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
-    .btn.outline{background:transparent;color:var(--txt);border:1px solid #cbd5e1}
+    .btn{
+      background:var(--c);
+      color:#fff;
+      border:none;
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      font-size:13px;
+    }
+    .btn.outline{
+      background:transparent;
+      color:var(--txt);
+      border:1px solid #cbd5e1;
+    }
     .btn:disabled{opacity:.5;cursor:not-allowed}
     .flex{display:flex;align-items:center;gap:10px}
     .between{justify-content:space-between}
-    .pill{display:inline-block;background:var(--chip-bg);color:var(--chip-txt);border:1px solid var(--chip-bd);border-radius:999px;padding:3px 10px;font-size:12px}
+    .pill{
+      display:inline-block;
+      background:var(--chip-bg);
+      color:var(--chip-txt);
+      border:1px solid var(--chip-bd);
+      border-radius:999px;
+      padding:3px 10px;
+      font-size:12px;
+    }
     .cols{display:grid;gap:10px}
     @media(min-width:900px){.cols{grid-template-columns:1fr 1fr}}
-    .sent{padding:10px;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:.15s}
-    .sent:hover{background:#0b0b0b08;border-color:#e2e8f0}
-    .dark .sent:hover{background:#ffffff10;border-color:#243041}
-    .sent.active{background:var(--accent-soft);border-color:var(--accent-bd);font-weight:600;color:var(--accent-txt)}
-    .sent-zh.active{background:var(--green-soft);border-color:var(--green-bd);color:var(--green-txt)}
+    .sent{
+      padding:10px;
+      border:1px solid transparent;
+      border-radius:10px;
+      cursor:pointer;
+      transition:.15s;
+    }
+    .sent:hover{
+      background:rgba(15,23,42,0.03);
+      border-color:#e2e8f0;
+    }
+    .dark .sent:hover{
+      background:rgba(148,163,184,0.1);
+      border-color:#334155;
+    }
+    .sent.active{
+      background:var(--accent-soft);
+      border-color:var(--accent-bd);
+      font-weight:600;
+      color:var(--accent-txt);
+    }
+    .sent-zh.active{
+      background:var(--green-soft);
+      border-color:var(--green-bd);
+      color:var(--green-txt);
+    }
     .ipa{font-size:12px;color:#475569;margin-top:4px}
-    .progress{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+    .progress{
+      height:8px;
+      background:#e5e7eb;
+      border-radius:999px;
+      overflow:hidden;
+    }
     .bar{height:100%;background:var(--b);width:0}
     .slider{width:220px}
     .note{font-size:12px;color:#0f766e}
 
-    /* ——— Theme toggle button ——— */
-    .toolbar{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-bottom:8px}
-    .toggle-theme{background:transparent;border:1px solid var(--border);color:var(--txt);padding:8px 12px;border-radius:10px;cursor:pointer}
+    /* 顶部工具栏（主题切换） */
+    .toolbar{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .toggle-theme{
+      background:transparent;
+      border:1px solid var(--border);
+      color:var(--txt);
+      padding:8px 12px;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:13px;
+    }
 
-    /* ——— Study widget ——— */
-    .study{position:fixed;right:18px;bottom:18px;max-width:360px;z-index:50}
-    .study .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    /* 学习时长小组件 */
+    .study{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      max-width:360px;
+      z-index:50;
+    }
+    .study .hdr{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:6px;
+    }
     .study .title{font-weight:700}
-    .study .compact{display:flex;gap:10px;flex-wrap:wrap}
-    .study .kpi{display:flex;gap:6px;align-items:baseline;background:var(--chip-bg);border:1px solid var(--chip-bd);color:var(--chip-txt);padding:6px 10px;border-radius:999px}
+    .study .compact{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .study .kpi{
+      display:flex;
+      gap:6px;
+      align-items:baseline;
+      background:var(--chip-bg);
+      border:1px solid var(--chip-bd);
+      color:var(--chip-txt);
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+    }
     .study .kpi .num{font-weight:800}
     .study .detail{display:none;margin-top:10px}
     .study.open .detail{display:block}
-    .study .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .study .box{padding:10px;border:1px solid var(--border);border-radius:10px}
+    .study .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+    }
+    .study .box{
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:10px;
+      font-size:13px;
+    }
     .study .label{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
   <div class="wrap">
+    <!-- 顶部工具栏：主题切换 -->
     <div class="toolbar">
       <button id="themeBtn" class="toggle-theme" title="切换黑/白模式">🌙 深色</button>
     </div>
+
     <h1>🎧 英文朗读 + 中英同步（OpenAI / ElevenLabs / 浏览器）</h1>
 
     <!-- Keys -->
@@ -142,14 +265,16 @@
         </div>
       </div>
       <div class="flex" style="margin-top:10px;flex-wrap:wrap;gap:10px">
-        <button id="prep" class="btn">拆句 & 翻译/音标</button>
+        <button id="prep" class="btn">拆句 & 翻译音标</button>
         <button id="playFromCurrent" class="btn">从当前句开始朗读</button>
         <button id="quickSpeak" class="btn outline">直接朗读整段（浏览器）</button>
         <button id="testSpeak" class="btn outline">测试朗读（Hello）</button>
         <button id="stop" class="btn outline">停止</button>
       </div>
       <div id="status" style="margin-top:8px;color:#334155"></div>
-      <div class="progress" style="margin-top:8px;display:none"><div class="bar" id="bar"></div></div>
+      <div class="progress" style="margin-top:8px;display:none">
+        <div class="bar" id="bar"></div>
+      </div>
       <div id="diag" class="note" style="display:none;margin-top:8px"></div>
     </div>
 
@@ -162,7 +287,7 @@
     </div>
   </div>
 
-  <!-- Study widget (WeChat Reading–style) -->
+  <!-- 学习时长小组件（右下角） -->
   <div id="studyWidget" class="card study">
     <div class="hdr">
       <div class="title">⏱ 学习时长</div>
@@ -174,12 +299,26 @@
     </div>
     <div class="detail">
       <div class="grid" style="margin-top:8px">
-        <div class="box"><div class="label">今天</div><div id="kDay">0分钟</div></div>
-        <div class="box"><div class="label">本周（周一-周日）</div><div id="kWeek">0分钟</div></div>
-        <div class="box"><div class="label">本月</div><div id="kMonth">0分钟</div></div>
-        <div class="box"><div class="label">今年</div><div id="kYear">0分钟</div></div>
+        <div class="box">
+          <div class="label">今天</div>
+          <div id="kDay">0分钟</div>
+        </div>
+        <div class="box">
+          <div class="label">本周（周一-周日）</div>
+          <div id="kWeek">0分钟</div>
+        </div>
+        <div class="box">
+          <div class="label">本月</div>
+          <div id="kMonth">0分钟</div>
+        </div>
+        <div class="box">
+          <div class="label">今年</div>
+          <div id="kYear">0分钟</div>
+        </div>
       </div>
-      <div style="margin-top:8px" class="label">数据保存在浏览器 localStorage（按自然日累计，切换深色模式与本地时间自动适配）。</div>
+      <div style="margin-top:8px" class="label">
+        数据保存在浏览器 localStorage（按自然日累计）。
+      </div>
     </div>
   </div>
 
@@ -187,220 +326,322 @@
 
   <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
   <script>
-    // --------- DOM ---------
-    const $ = (id)=>document.getElementById(id);
-    const openaiKeyEl=$('openaiKey');
-    const xiKeyEl=$('xiKey');
-    const xiVoiceEl=$('xiVoice');
-    const inputEn=$('inputEn');
-    const docx=$('docx');
-    const translateChk=$('translateChk');
-    const ipaChk=$('ipaChk');
-    const engine=$('engine');
-    const rate=$('rate');
-    const rateVal=$('rateVal');
-    const prep=$('prep');
-    const playFromCurrent=$('playFromCurrent');
-    const quickSpeak=$('quickSpeak');
-    const testSpeak=$('testSpeak');
-    const stopBtn=$('stop');
-    const statusEl=$('status');
-    const enCol=$('enCol');
-    const zhCol=$('zhCol');
-    const player=$('player');
-    const bar=$('bar');
-    const progressWrap=document.querySelector('.progress');
-    const charCount=$('charCount');
-    const diag=$('diag');
+    const $ = id => document.getElementById(id);
+    const openaiKeyEl=$("openaiKey");
+    const xiKeyEl=$("xiKey");
+    const xiVoiceEl=$("xiVoice");
+    const inputEn=$("inputEn");
+    const docx=$("docx");
+    const translateChk=$("translateChk");
+    const ipaChk=$("ipaChk");
+    const engine=$("engine");
+    const rate=$("rate");
+    const rateVal=$("rateVal");
+    const prep=$("prep");
+    const playFromCurrent=$("playFromCurrent");
+    const quickSpeak=$("quickSpeak");
+    const testSpeak=$("testSpeak");
+    const stopBtn=$("stop");
+    const statusEl=$("status");
+    const enCol=$("enCol");
+    const zhCol=$("zhCol");
+    const player=$("player");
+    const bar=$("bar");
+    const progressWrap=document.querySelector(".progress");
+    const charCount=$("charCount");
+    const diag=$("diag");
 
-    // Theme elements
-    const themeBtn = $('themeBtn');
+    const themeBtn = $("themeBtn");
 
-    // Study widget elements
-    const studyCard = $('studyWidget');
-    const btnDetail = $('toggleDetail');
-    const kThis = $('kThis');
-    const kTotal = $('kTotal');
-    const kDay = $('kDay');
-    const kWeek = $('kWeek');
-    const kMonth = $('kMonth');
-    const kYear = $('kYear');
+    const studyCard = $("studyWidget");
+    const btnDetail = $("toggleDetail");
+    const kThis = $("kThis");
+    const kTotal = $("kTotal");
+    const kDay = $("kDay");
+    const kWeek = $("kWeek");
+    const kMonth = $("kMonth");
+    const kYear = $("kYear");
 
-    // --------- localStorage (keys) ---------
     const LS_KEYS = {
-      OPENAI:'openaiKey', XI:'xiKey', XIVOICE:'xiVoice',
-      THEME:'study:theme',
-      DAILY:'study:dailySeconds' // JSON: { 'YYYY-MM-DD': seconds }
+      OPENAI:"openaiKey",
+      XI:"xiKey",
+      XIVOICE:"xiVoice",
+      THEME:"study:theme",
+      DAILY:"study:dailySeconds"   // { "YYYY-MM-DD": seconds }
     };
 
-    // Init stored keys
+    // 读取密钥
     try{
-      openaiKeyEl.value=localStorage.getItem(LS_KEYS.OPENAI)||'';
-      xiKeyEl.value=localStorage.getItem(LS_KEYS.XI)||'';
+      openaiKeyEl.value=localStorage.getItem(LS_KEYS.OPENAI)||"";
+      xiKeyEl.value=localStorage.getItem(LS_KEYS.XI)||"";
       xiVoiceEl.value=localStorage.getItem(LS_KEYS.XIVOICE)||xiVoiceEl.value;
-    }catch(e){console.warn('localStorage 不可用：',e)}
+    }catch(e){console.warn("localStorage 不可用：",e);}
 
-    $('saveKeys').addEventListener('click',()=>{
+    $("saveKeys").addEventListener("click",()=>{
       try{
-        const ok=openaiKeyEl.value.trim().replace(/^[["\']]|[["\']]$/g,'');
-        const xk=xiKeyEl.value.trim().replace(/^[["\']]|[["\']]$/g,'');
-        const xv=xiVoiceEl.value.trim().replace(/^[["\']]|[["\']]$/g,'');
+        const ok=openaiKeyEl.value.trim().replace(/^["']|["']$/g,"");
+        const xk=xiKeyEl.value.trim().replace(/^["']|["']$/g,"");
+        const xv=xiVoiceEl.value.trim().replace(/^["']|["']$/g,"");
         localStorage.setItem(LS_KEYS.OPENAI,ok);
         localStorage.setItem(LS_KEYS.XI,xk);
         localStorage.setItem(LS_KEYS.XIVOICE,xv);
         openaiKeyEl.value=ok; xiKeyEl.value=xk; xiVoiceEl.value=xv;
-        const hint=$('saveHint'); hint.style.display='block'; setTimeout(()=>hint.style.display='none',1600);
-      }catch(e){ alert('无法保存：浏览器禁止了本地存储或处于隐私模式'); }
+        const hint=$("saveHint");
+        hint.style.display="block";
+        setTimeout(()=>hint.style.display="none",1600);
+      }catch(e){ alert("无法保存：浏览器禁止了本地存储或处于隐私模式"); }
     });
-    $('clearKeys').addEventListener('click',()=>{
-      try{ localStorage.removeItem(LS_KEYS.OPENAI); localStorage.removeItem(LS_KEYS.XI); localStorage.removeItem(LS_KEYS.XIVOICE);
-        openaiKeyEl.value=''; xiKeyEl.value='';
-        const hint=$('saveHint'); hint.textContent='已清除本地密钥'; hint.style.display='block'; setTimeout(()=>{hint.textContent='已保存到本地 ✓'; hint.style.display='none'},1600);
-      }catch(e){ alert('清除失败：'+e) }
+    $("clearKeys").addEventListener("click",()=>{
+      try{
+        localStorage.removeItem(LS_KEYS.OPENAI);
+        localStorage.removeItem(LS_KEYS.XI);
+        localStorage.removeItem(LS_KEYS.XIVOICE);
+        openaiKeyEl.value=""; xiKeyEl.value="";
+        const hint=$("saveHint");
+        hint.textContent="已清除本地密钥";
+        hint.style.display="block";
+        setTimeout(()=>{
+          hint.textContent="已保存到本地 ✓";
+          hint.style.display="none";
+        },1600);
+      }catch(e){ alert("清除失败："+e); }
     });
 
-    // --------- Theme (Dark/Light) ---------
+    // 主题切换
     function applyTheme(theme){
-      document.body.classList.toggle('dark', theme==='dark');
-      themeBtn.textContent = theme==='dark' ? '☀️ 浅色' : '🌙 深色';
+      document.body.classList.toggle("dark", theme==="dark");
+      themeBtn.textContent = theme==="dark" ? "☀️ 浅色" : "🌙 深色";
       localStorage.setItem(LS_KEYS.THEME, theme);
     }
     (function initTheme(){
       const saved = localStorage.getItem(LS_KEYS.THEME);
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const theme = saved || (prefersDark ? 'dark' : 'light');
+      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const theme = saved || (prefersDark ? "dark" : "light");
       applyTheme(theme);
     })();
-    themeBtn.addEventListener('click',()=>{
-      const current = document.body.classList.contains('dark') ? 'dark' : 'light';
-      applyTheme(current==='dark' ? 'light' : 'dark');
+    themeBtn.addEventListener("click",()=>{
+      const current = document.body.classList.contains("dark") ? "dark" : "light";
+      applyTheme(current==="dark" ? "light" : "dark");
     });
 
-    // --------- helpers ---------
+    // 工具函数
     const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
-    function updateCount(){ charCount.textContent=(inputEn.value||'').length+" chars"; }
-    ['input','change','keyup','paste'].forEach(ev=> inputEn.addEventListener(ev,updateCount));
+    function updateCount(){ charCount.textContent=(inputEn.value||"").length+" chars"; }
+    ["input","change","keyup","paste"].forEach(ev=> inputEn.addEventListener(ev,updateCount));
     updateCount();
-    rate.addEventListener('input',()=>{rateVal.textContent=Number(rate.value).toFixed(2)+'x'});
+    rate.addEventListener("input",()=>{rateVal.textContent=Number(rate.value).toFixed(2)+"x";});
 
-    function showDiag(msg){ diag.textContent=msg; diag.style.display='block'; }
-    function hideDiag(){ diag.style.display='none'; diag.textContent=''; }
+    function showDiag(msg){ diag.textContent=msg; diag.style.display="block"; }
+    function hideDiag(){ diag.style.display="none"; diag.textContent=""; }
 
     function ensureVoicesLoaded(timeout=2000){
       return new Promise((resolve)=>{
         const have=()=> speechSynthesis.getVoices().length>0;
         if(have()) return resolve(true);
-        const id=setInterval(()=>{ if(have()){clearInterval(id); resolve(true);} }, 150);
-        setTimeout(()=>{clearInterval(id); resolve(true);}, timeout);
+        const id=setInterval(()=>{
+          if(have()){clearInterval(id); resolve(true);}
+        },150);
+        setTimeout(()=>{clearInterval(id); resolve(true);},timeout);
       });
     }
 
-    // --------- split & render ---------
+    // 拆句 & 渲染
     let EN=[], ZH=[], PH=[], currentIndex=0, isSpeaking=false;
 
     function splitSentences(txt){
-      const cleaned=(txt||'').replace(/\s+/g,' ').trim();
+      const cleaned=(txt||"").replace(/\s+/g," ").trim();
       if(!cleaned) return [];
       return cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
     }
 
     function renderCols(){
-      enCol.innerHTML=''; zhCol.innerHTML='';
+      enCol.innerHTML=""; zhCol.innerHTML="";
       EN.forEach((s,i)=>{
-        const d=document.createElement('div'); d.className='sent'+(i===currentIndex?' active':'');
-        const ipa = PH[i] ? `<div class="ipa">/${PH[i]}/</div>` : '';
-        d.innerHTML = `<div>${s}</div>${ipa}`; d.dataset.idx=i; d.onclick=()=>{highlight(i); speakFrom(i)}; enCol.appendChild(d);
-        const z=document.createElement('div'); z.className='sent sent-zh'+(i===currentIndex?' active':''); z.textContent=ZH[i]||''; zhCol.appendChild(z);
+        const d=document.createElement("div");
+        d.className="sent"+(i===currentIndex?" active":"");
+        const ipa = PH[i] ? `<div class="ipa">/${PH[i]}/</div>` : "";
+        d.innerHTML = `<div>${s}</div>${ipa}`;
+        d.dataset.idx=i;
+        d.onclick=()=>{highlight(i); speakFrom(i);};
+        enCol.appendChild(d);
+
+        const z=document.createElement("div");
+        z.className="sent sent-zh"+(i===currentIndex?" active":"");
+        z.textContent=ZH[i]||"";
+        zhCol.appendChild(z);
       });
     }
     function highlight(i){
       currentIndex=i;
-      [...enCol.children].forEach((el,idx)=> el.classList.toggle('active',idx===i));
-      [...zhCol.children].forEach((el,idx)=> el.classList.toggle('active',idx===i));
-      enCol.children[i]?.scrollIntoView({behavior:'smooth',block:'center'});
-      zhCol.children[i]?.scrollIntoView({behavior:'smooth',block:'center'});
+      [...enCol.children].forEach((el,idx)=> el.classList.toggle("active",idx===i));
+      [...zhCol.children].forEach((el,idx)=> el.classList.toggle("active",idx===i));
+      enCol.children[i]?.scrollIntoView({behavior:"smooth",block:"center"});
+      zhCol.children[i]?.scrollIntoView({behavior:"smooth",block:"center"});
     }
 
-    // upload
-    docx.addEventListener('change',async(e)=>{
+    // 读取 docx
+    docx.addEventListener("change",async(e)=>{
       const f=e.target.files?.[0]; if(!f) return;
-      const buf=await f.arrayBuffer(); const {value}=await window.mammoth.extractRawText({arrayBuffer:buf});
+      const buf=await f.arrayBuffer();
+      const {value}=await window.mammoth.extractRawText({arrayBuffer:buf});
       inputEn.value=value.trim(); updateCount();
     });
 
-    // translate by sentence
+    // 翻译
     async function translateBySentence(arr){
-      if(!translateChk.checked) return new Array(arr.length).fill('');
+      if(!translateChk.checked) return new Array(arr.length).fill("");
       const key=openaiKeyEl.value.trim();
-      if(!key){ alert('开启了自动翻译，请先填写 OpenAI Key，或先关掉自动翻译'); return new Array(arr.length).fill(''); }
-      statusEl.textContent='正在逐句翻译…'; hideDiag();
-      const prompt='Translate each English sentence into Simplified Chinese. Return ONLY a JSON array of strings, same length and order as input. No commentary.';
-      const content=arr.map((s,i)=>`${i+1}. ${s}`).join('\n');
-      const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:prompt},{role:'user',content}],temperature:0.2})});
-      if(!res.ok){ statusEl.textContent='翻译失败'; showDiag('翻译错误：'+await res.text()); return new Array(arr.length).fill(''); }
+      if(!key){
+        alert("开启了自动翻译，请先填写 OpenAI Key，或先关掉自动翻译");
+        return new Array(arr.length).fill("");
+      }
+      statusEl.textContent="正在逐句翻译…"; hideDiag();
+      const prompt="Translate each English sentence into Simplified Chinese. Return ONLY a JSON array of strings, same length and order as input. No commentary.";
+      const content=arr.map((s,i)=>`${i+1}. ${s}`).join("\n");
+      const res=await fetch("https://api.openai.com/v1/chat/completions",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":`Bearer ${key}`
+        },
+        body:JSON.stringify({
+          model:"gpt-4o-mini",
+          messages:[
+            {role:"system",content:prompt},
+            {role:"user",content}
+          ],
+          temperature:0.2
+        })
+      });
+      if(!res.ok){
+        statusEl.textContent="翻译失败";
+        showDiag("翻译错误："+await res.text());
+        return new Array(arr.length).fill("");
+      }
       const data=await res.json();
-      const out=data.choices?.[0]?.message?.content||'';
-      try{ const s=out.indexOf('['), e=out.lastIndexOf(']'); return JSON.parse(out.slice(s,e+1)).map(String); }
-      catch{ return out.split(/\n+/).map(x=>x.trim()); }
-      finally{ statusEl.textContent=''; }
+      const out=data.choices?.[0]?.message?.content||"";
+      try{
+        const s=out.indexOf("["),
+              e=out.lastIndexOf("]");
+        return JSON.parse(out.slice(s,e+1)).map(String);
+      }catch{
+        return out.split(/\n+/).map(x=>x.trim());
+      }finally{
+        statusEl.textContent="";
+      }
     }
 
-    // IPA by sentence (American)
+    // IPA
     async function ipaBySentence(arr){
-      if(!ipaChk.checked) return new Array(arr.length).fill('');
+      if(!ipaChk.checked) return new Array(arr.length).fill("");
       const key=openaiKeyEl.value.trim();
-      if(!key){ alert('显示美式音标需要 OpenAI Key（或先关闭“显示美式音标”）'); return new Array(arr.length).fill(''); }
-      statusEl.textContent='正在生成美式音标…'; hideDiag();
-      const prompt='You are a phonetics assistant. For each English sentence, output its American IPA transcription. Return ONLY a JSON array of strings (no numbering, no extra text). Use IPA symbols; do NOT include surrounding slashes.';
-      const content=arr.join('\n');
-      const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini',messages:[{role:'system',content:prompt},{role:'user',content}],temperature:0})});
-      if(!res.ok){ statusEl.textContent='音标生成失败'; showDiag('音标错误：'+await res.text()); return new Array(arr.length).fill(''); }
-      const data=await res.json(); const out=data.choices?.[0]?.message?.content||'';
-      try{ const s=out.indexOf('['), e=out.lastIndexOf(']'); return JSON.parse(out.slice(s,e+1)).map(String); }
-      catch{ return new Array(arr.length).fill(''); }
-      finally{ statusEl.textContent=''; }
+      if(!key){
+        alert("显示美式音标需要 OpenAI Key（或先关闭“显示美式音标”）");
+        return new Array(arr.length).fill("");
+      }
+      statusEl.textContent="正在生成美式音标…"; hideDiag();
+      const prompt="You are a phonetics assistant. For each English sentence, output its American IPA transcription. Return ONLY a JSON array of strings (no numbering, no extra text). Use IPA symbols; do NOT include surrounding slashes.";
+      const content=arr.join("\n");
+      const res=await fetch("https://api.openai.com/v1/chat/completions",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":`Bearer ${key}`
+        },
+        body:JSON.stringify({
+          model:"gpt-4o-mini",
+          messages:[
+            {role:"system",content:prompt},
+            {role:"user",content}
+          ],
+          temperature:0
+        })
+      });
+      if(!res.ok){
+        statusEl.textContent="音标生成失败";
+        showDiag("音标错误："+await res.text());
+        return new Array(arr.length).fill("");
+      }
+      const data=await res.json();
+      const out=data.choices?.[0]?.message?.content||"";
+      try{
+        const s=out.indexOf("["),
+              e=out.lastIndexOf("]");
+        return JSON.parse(out.slice(s,e+1)).map(String);
+      }catch{
+        return new Array(arr.length).fill("");
+      }finally{
+        statusEl.textContent="";
+      }
     }
 
-    // prepare
-    prep.addEventListener('click',async()=>{
+    // 预处理
+    prep.addEventListener("click",async()=>{
       const txt=inputEn.value.trim();
-      if(!txt){ alert('请先粘贴英文内容'); return; }
+      if(!txt){ alert("请先粘贴英文内容"); return; }
       EN=splitSentences(txt);
-      if(EN.length===0){ alert('没有检测到完整句子（请检查英文句尾是否有 . ? !）'); return; }
-      ZH=new Array(EN.length).fill(''); PH=new Array(EN.length).fill('');
-      currentIndex=0; renderCols(); highlight(0);
-      try{ ZH=await translateBySentence(EN); PH=await ipaBySentence(EN); renderCols(); highlight(0);}catch(e){console.error(e)}
+      if(EN.length===0){
+        alert("没有检测到完整句子（请检查英文句尾是否有 . ? !）");
+        return;
+      }
+      ZH=new Array(EN.length).fill("");
+      PH=new Array(EN.length).fill("");
+      currentIndex=0;
+      renderCols(); highlight(0);
+      try{
+        ZH=await translateBySentence(EN);
+        PH=await ipaBySentence(EN);
+        renderCols(); highlight(0);
+      }catch(e){console.error(e);}
     });
 
-    // --------- engines ---------
+    // 朗读相关
     async function speakFrom(start){
       const eng=engine.value;
-      if(eng==='browser' && EN.length===0){
-        const text=inputEn.value.trim(); if(!text){ alert('请先粘贴英文内容'); return; }
-        await ensureVoicesLoaded(); speechSynthesis.cancel();
-        const u=new SpeechSynthesisUtterance(text); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
-        u.onerror=(e)=>console.warn('浏览器朗读错误',e); speechSynthesis.speak(u); return;
+      if(eng==="browser" && EN.length===0){
+        const text=inputEn.value.trim();
+        if(!text){ alert("请先粘贴英文内容"); return; }
+        await ensureVoicesLoaded();
+        speechSynthesis.cancel();
+        const u=new SpeechSynthesisUtterance(text);
+        u.lang="en-US"; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
+        u.onerror=e=>console.warn("浏览器朗读错误",e);
+        speechSynthesis.speak(u);
+        return;
       }
-      if(!EN.length){ alert('还没有句子可读，请先“拆句 & 翻译/音标”'); return; }
-      if(eng!=='browser'){
-        if(eng==='openai' && !openaiKeyEl.value.trim()) return alert('OpenAI 模式需要 OpenAI Key');
-        if(eng==='eleven' && !xiKeyEl.value.trim()) return alert('ElevenLabs 模式需要 ElevenLabs Key');
+      if(!EN.length){
+        alert("还没有句子可读，请先“拆句 & 翻译音标”");
+        return;
       }
-      isSpeaking=true; showProgress(eng!=='browser');
+      if(eng!=="browser"){
+        if(eng==="openai" && !openaiKeyEl.value.trim()) return alert("OpenAI 模式需要 OpenAI Key");
+        if(eng==="eleven" && !xiKeyEl.value.trim()) return alert("ElevenLabs 模式需要 ElevenLabs Key");
+      }
+      isSpeaking=true;
+      showProgress(eng!=="browser");
       try{
-        if(eng==='browser') await speakBrowserFrom(start);
-        else if(eng==='openai') await speakOpenAIFrom(start);
+        if(eng==="browser") await speakBrowserFrom(start);
+        else if(eng==="openai") await speakOpenAIFrom(start);
         else await speakElevenFrom(start);
-      }catch(err){ alert('朗读出错：'+(err?.message||err)); }
-      finally{ isSpeaking=false; showProgress(false); }
+      }catch(err){
+        alert("朗读出错："+(err?.message||err));
+      }finally{
+        isSpeaking=false;
+        showProgress(false);
+      }
     }
 
     async function speakBrowserFrom(start){
-      await ensureVoicesLoaded(); speechSynthesis.cancel();
+      await ensureVoicesLoaded();
+      speechSynthesis.cancel();
       for(let i=start;i<EN.length;i++){
         highlight(i);
-        const u=new SpeechSynthesisUtterance(EN[i]); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
-        await new Promise(res=>{ u.onend=res; u.onerror=res; speechSynthesis.speak(u); });
+        const u=new SpeechSynthesisUtterance(EN[i]);
+        u.lang="en-US"; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
+        await new Promise(res=>{
+          u.onend=res; u.onerror=res;
+          speechSynthesis.speak(u);
+        });
         if(!isSpeaking) break;
       }
     }
@@ -408,88 +649,176 @@
     async function speakOpenAIFrom(start){
       const key=openaiKeyEl.value.trim();
       for(let i=start;i<EN.length;i++){
-        highlight(i); const url=await openaiTts(EN[i],key); await play(url); setBar(((i-start+1)/(EN.length-start))*100);
+        highlight(i);
+        const url=await openaiTts(EN[i],key);
+        await play(url);
+        setBar(((i-start+1)/(EN.length-start))*100);
         if(!isSpeaking) break;
       }
     }
     async function openaiTts(text,key){
-      const res=await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${key}`},body:JSON.stringify({model:'gpt-4o-mini-tts',voice:'alloy',input:text,format:'mp3'})});
+      const res=await fetch("https://api.openai.com/v1/audio/speech",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":`Bearer ${key}`
+        },
+        body:JSON.stringify({
+          model:"gpt-4o-mini-tts",
+          voice:"alloy",
+          input:text,
+          format:"mp3"
+        })
+      });
       if(!res.ok) throw new Error(await res.text());
-      const buf=await res.arrayBuffer(); return URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}));
+      const buf=await res.arrayBuffer();
+      return URL.createObjectURL(new Blob([buf],{type:"audio/mpeg"}));
     }
 
     async function speakElevenFrom(start){
-      const key=xiKeyEl.value.trim(); const vid=xiVoiceEl.value.trim();
+      const key=xiKeyEl.value.trim();
+      const vid=xiVoiceEl.value.trim();
       for(let i=start;i<EN.length;i++){
-        highlight(i); const url=await elevenTts(EN[i],key,vid); await play(url); setBar(((i-start+1)/(EN.length-start))*100);
+        highlight(i);
+        const url=await elevenTts(EN[i],key,vid);
+        await play(url);
+        setBar(((i-start+1)/(EN.length-start))*100);
         if(!isSpeaking) break;
       }
     }
     async function elevenTts(text,key,voiceId){
       const url=`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`;
-      const res=await fetch(url,{method:'POST',headers:{'xi-api-key':key,'Content-Type':'application/json','accept':'audio/mpeg'},body:JSON.stringify({text,model_id:'eleven_turbo_v2',voice_settings:{stability:0.5,similarity_boost:0.8}})});
+      const res=await fetch(url,{
+        method:"POST",
+        headers:{
+          "xi-api-key":key,
+          "Content-Type":"application/json",
+          "accept":"audio/mpeg"
+        },
+        body:JSON.stringify({
+          text,
+          model_id:"eleven_turbo_v2",
+          voice_settings:{stability:0.5,similarity_boost:0.8}
+        })
+      });
       if(!res.ok) throw new Error(await res.text());
-      const buf=await res.arrayBuffer(); return URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}));
+      const buf=await res.arrayBuffer();
+      return URL.createObjectURL(new Blob([buf],{type:"audio/mpeg"}));
     }
 
     function play(url){
       return new Promise((resolve,reject)=>{
-        player.src=url; player.playbackRate=clamp(parseFloat(rate.value),0.6,1.4);
-        player.onended=()=>resolve(); player.onerror=(e)=>reject(e); player.play().catch(reject);
+        player.src=url;
+        player.playbackRate=clamp(parseFloat(rate.value),0.6,1.4);
+        player.onended=()=>resolve();
+        player.onerror=e=>reject(e);
+        player.play().catch(reject);
       });
     }
 
-    // stop & progress
-    stopBtn.addEventListener('click',()=>{ isSpeaking=false; speechSynthesis?.cancel?.(); player.pause(); });
-    function showProgress(v){ progressWrap.style.display=v?'block':'none'; if(!v) setBar(0); }
-    function setBar(p){ bar.style.width=p+'%'; }
+    stopBtn.addEventListener("click",()=>{
+      isSpeaking=false;
+      speechSynthesis?.cancel?.();
+      player.pause();
+    });
+    function showProgress(v){
+      progressWrap.style.display=v?"block":"none";
+      if(!v) setBar(0);
+    }
+    function setBar(p){ bar.style.width=p+"%"; }
 
-    // quick actions
-    playFromCurrent.addEventListener('click',()=> speakFrom(currentIndex));
-    quickSpeak.addEventListener('click',()=>{ engine.value='browser'; speakFrom(0); });
-    testSpeak.addEventListener('click', async ()=>{
-      try{ await ensureVoicesLoaded(); speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance("Hello from your browser! Testing testing."); u.lang='en-US'; u.rate=clamp(parseFloat(rate.value),0.6,1.4); speechSynthesis.speak(u);}catch(e){ alert('测试朗读失败：'+(e?.message||e)); }
+    playFromCurrent.addEventListener("click",()=> speakFrom(currentIndex));
+    quickSpeak.addEventListener("click",()=>{
+      engine.value="browser";
+      speakFrom(0);
+    });
+    testSpeak.addEventListener("click", async ()=>{
+      try{
+        await ensureVoicesLoaded();
+        speechSynthesis.cancel();
+        const u=new SpeechSynthesisUtterance("Hello from your browser! Testing testing.");
+        u.lang="en-US"; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
+        speechSynthesis.speak(u);
+      }catch(e){
+        alert("测试朗读失败："+(e?.message||e));
+      }
     });
 
-    // =====================
-    // WeChat Reading–style study timer & stats
-    // =====================
+    // ==== 学习时长统计 ====
     function todayStr(d=new Date()){
-      const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0');
+      const y=d.getFullYear();
+      const m=String(d.getMonth()+1).padStart(2,"0");
+      const dd=String(d.getDate()).padStart(2,"0");
       return `${y}-${m}-${dd}`;
     }
     function getMonday(d){
-      const x=new Date(d); const day=(x.getDay()+6)%7; // Mon=0
-      x.setHours(0,0,0,0); x.setDate(x.getDate()-day); return x;
+      const x=new Date(d);
+      const day=(x.getDay()+6)%7; // 周一=0
+      x.setHours(0,0,0,0);
+      x.setDate(x.getDate()-day);
+      return x;
     }
-    function endOfWeek(d){ const m=getMonday(d); const e=new Date(m); e.setDate(m.getDate()+6); return e; }
-    function startOfMonth(d){ const x=new Date(d.getFullYear(), d.getMonth(), 1); return x; }
-    function endOfMonth(d){ const x=new Date(d.getFullYear(), d.getMonth()+1, 0); return x; }
+    function endOfWeek(d){
+      const m=getMonday(d);
+      const e=new Date(m);
+      e.setDate(m.getDate()+6);
+      return e;
+    }
+    function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+    function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
     function startOfYear(d){ return new Date(d.getFullYear(),0,1); }
     function endOfYear(d){ return new Date(d.getFullYear(),11,31); }
 
     function loadDaily(){
-      try{ const raw=localStorage.getItem(LS_KEYS.DAILY); if(!raw) return {}; const obj=JSON.parse(raw); return obj&&typeof obj==='object'?obj:{} }catch{ return {} }
+      try{
+        const raw=localStorage.getItem(LS_KEYS.DAILY);
+        if(!raw) return {};
+        const obj=JSON.parse(raw);
+        return obj && typeof obj==="object" ? obj : {};
+      }catch{ return {}; }
     }
-    function saveDaily(map){ try{ localStorage.setItem(LS_KEYS.DAILY, JSON.stringify(map)); }catch(e){ console.warn('保存统计失败',e) } }
+    function saveDaily(map){
+      try{ localStorage.setItem(LS_KEYS.DAILY, JSON.stringify(map)); }
+      catch(e){ console.warn("保存统计失败",e); }
+    }
 
-    function fmtHMS(sec){ sec=Math.max(0,Math.floor(sec)); const h=Math.floor(sec/3600); const m=Math.floor((sec%3600)/60); const s=sec%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` }
-    function fmtHMfromSec(sec){ sec=Math.max(0,Math.floor(sec)); const h=Math.floor(sec/3600); const m=Math.floor((sec%3600)/60); return `${h}小时${m}分钟`; }
-    function minutesStr(sec){ const m=Math.round(sec/60); return `${m}分钟`; }
+    function fmtHMS(sec){
+      sec=Math.max(0,Math.floor(sec));
+      const h=Math.floor(sec/3600);
+      const m=Math.floor((sec%3600)/60);
+      const s=sec%60;
+      return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    }
+    function fmtHMfromSec(sec){
+      sec=Math.max(0,Math.floor(sec));
+      const h=Math.floor(sec/3600);
+      const m=Math.floor((sec%3600)/60);
+      return `${h}小时${m}分钟`;
+    }
+    function minutesStr(sec){
+      const m=Math.round(sec/60);
+      return `${m}分钟`;
+    }
 
     let daily = loadDaily();
-    let sessionSeconds = 0; // 本次
+    let sessionSeconds = 0;
     let tickTimer = null;
-    let visible = document.visibilityState === 'visible';
+    let visible = document.visibilityState === "visible";
 
     function sumRange(startDate,endDate){
       const s=new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
       const e=new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-      let cur=new Date(s); let total=0;
-      while(cur<=e){ total += (daily[todayStr(cur)]||0); cur.setDate(cur.getDate()+1); }
+      let cur=new Date(s);
+      let total=0;
+      while(cur<=e){
+        total += (daily[todayStr(cur)]||0);
+        cur.setDate(cur.getDate()+1);
+      }
       return total;
     }
-    function totalAll(){ return Object.values(daily).reduce((a,b)=>a+(+b||0),0); }
+    function totalAll(){
+      return Object.values(daily).reduce((a,b)=>a+(+b||0),0);
+    }
 
     function renderStats(){
       const now=new Date();
@@ -502,30 +831,34 @@
     }
 
     function tick(){
-      if(!visible) return; // 仅前台计时
+      if(!visible) return;
       sessionSeconds += 1;
-      const key = todayStr(new Date());
-      daily[key] = (daily[key]||0) + 1; // 按自然日累计秒数
+      const key=todayStr(new Date());
+      daily[key]=(daily[key]||0)+1;
     }
 
     function startCounting(){
       if(tickTimer) clearInterval(tickTimer);
-      tickTimer = setInterval(()=>{ tick(); if(sessionSeconds % 2 === 0) renderStats(); if(sessionSeconds % 10 === 0) saveDaily(daily); }, 1000);
+      tickTimer=setInterval(()=>{
+        tick();
+        if(sessionSeconds % 2 === 0) renderStats();
+        if(sessionSeconds % 10 === 0) saveDaily(daily);
+      },1000);
       renderStats();
     }
 
-    document.addEventListener('visibilitychange',()=>{ visible = document.visibilityState === 'visible'; });
-    window.addEventListener('focus',()=>{ visible=true; });
-    window.addEventListener('blur',()=>{ visible=false; });
-    window.addEventListener('beforeunload',()=>{ saveDaily(daily); });
+    document.addEventListener("visibilitychange",()=>{
+      visible = document.visibilityState === "visible";
+    });
+    window.addEventListener("focus",()=>{ visible=true; });
+    window.addEventListener("blur",()=>{ visible=false; });
+    window.addEventListener("beforeunload",()=>{ saveDaily(daily); });
 
-    // Detail toggle
-    btnDetail.addEventListener('click',()=>{
-      studyCard.classList.toggle('open');
-      btnDetail.textContent = studyCard.classList.contains('open') ? '收起' : '查看详情';
+    btnDetail.addEventListener("click",()=>{
+      studyCard.classList.toggle("open");
+      btnDetail.textContent = studyCard.classList.contains("open") ? "收起" : "查看详情";
     });
 
-    // Kick off counting
     startCounting();
   </script>
 </body>
