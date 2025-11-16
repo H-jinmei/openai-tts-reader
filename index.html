@@ -64,10 +64,11 @@
       background:var(--c);
       color:#fff;
       border:none;
-      padding:10px 14px;
+      padding:8px 12px;
       border-radius:10px;
       cursor:pointer;
-      font-size:13px;
+      font-size:12px;
+      white-space:nowrap;
     }
     .btn.outline{
       background:transparent;
@@ -125,13 +126,14 @@
     .slider{width:220px}
     .note{font-size:12px;color:#0f766e}
 
-    /* 顶部工具栏（主题切换） */
+    /* 顶部工具栏：主题 + 计时器 */
     .toolbar{
       display:flex;
       align-items:center;
       justify-content:flex-end;
       gap:10px;
       margin-bottom:8px;
+      flex-wrap:wrap;
     }
     .toggle-theme{
       background:transparent;
@@ -144,24 +146,35 @@
     }
 
     /* 学习时长小组件 */
+    .study.card{
+      margin:0;
+      padding:8px 12px;
+    }
     .study{
-      position:fixed;
-      right:18px;
-      bottom:18px;
-      max-width:360px;
-      z-index:50;
+      max-width:460px;
     }
     .study .hdr{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      margin-bottom:6px;
+      margin-bottom:4px;
+      gap:8px;
     }
-    .study .title{font-weight:700}
+    .study .title{font-weight:700;font-size:13px}
+    .study .hdr-btns{
+      display:flex;
+      gap:6px;
+      flex-shrink:0;
+    }
+    .study .hdr-btns .btn{
+      padding:4px 8px;
+      font-size:11px;
+    }
     .study .compact{
       display:flex;
-      gap:10px;
+      gap:8px;
       flex-wrap:wrap;
+      align-items:center;
     }
     .study .kpi{
       display:flex;
@@ -170,12 +183,12 @@
       background:var(--chip-bg);
       border:1px solid var(--chip-bd);
       color:var(--chip-txt);
-      padding:6px 10px;
+      padding:4px 10px;
       border-radius:999px;
-      font-size:12px;
+      font-size:11px;
     }
     .study .kpi .num{font-weight:800}
-    .study .detail{display:none;margin-top:10px}
+    .study .detail{display:none;margin-top:8px}
     .study.open .detail{display:block}
     .study .grid{
       display:grid;
@@ -183,19 +196,57 @@
       gap:8px;
     }
     .study .box{
-      padding:10px;
+      padding:8px;
       border:1px solid var(--border);
       border-radius:10px;
-      font-size:13px;
+      font-size:12px;
     }
-    .study .label{font-size:12px;color:var(--muted)}
+    .study .label{font-size:11px;color:var(--muted)}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <!-- 顶部工具栏：主题切换 -->
+    <!-- 顶部工具栏：主题 + 计时器 -->
     <div class="toolbar">
       <button id="themeBtn" class="toggle-theme" title="切换黑/白模式">🌙 深色</button>
+
+      <!-- 学习时长组件（挨着主题按钮） -->
+      <div id="studyWidget" class="card study">
+        <div class="hdr">
+          <div class="title">⏱ 学习时长</div>
+          <div class="hdr-btns">
+            <button id="toggleTimer" class="btn outline">暂停</button>
+            <button id="toggleDetail" class="btn outline">详情</button>
+          </div>
+        </div>
+        <div class="compact">
+          <div class="kpi"><span>本次</span><span class="num" id="kThis">00:00:00</span></div>
+          <div class="kpi"><span>总计</span><span class="num" id="kTotal">0小时0分钟</span></div>
+        </div>
+        <div class="detail">
+          <div class="grid" style="margin-top:8px">
+            <div class="box">
+              <div class="label">今天</div>
+              <div id="kDay">0分钟</div>
+            </div>
+            <div class="box">
+              <div class="label">本周（周一-周日）</div>
+              <div id="kWeek">0分钟</div>
+            </div>
+            <div class="box">
+              <div class="label">本月</div>
+              <div id="kMonth">0分钟</div>
+            </div>
+            <div class="box">
+              <div class="label">今年</div>
+              <div id="kYear">0分钟</div>
+            </div>
+          </div>
+          <div style="margin-top:8px" class="label">
+            仅在页面前台且计时为“开始”时累积；数据保存在浏览器 localStorage（按自然日累计）。
+          </div>
+        </div>
+      </div>
     </div>
 
     <h1>🎧 英文朗读 + 中英同步（OpenAI / ElevenLabs / 浏览器）</h1>
@@ -287,41 +338,6 @@
     </div>
   </div>
 
-  <!-- 学习时长小组件（右下角） -->
-  <div id="studyWidget" class="card study">
-    <div class="hdr">
-      <div class="title">⏱ 学习时长</div>
-      <button id="toggleDetail" class="btn outline" style="padding:6px 10px;font-size:12px">查看详情</button>
-    </div>
-    <div class="compact">
-      <div class="kpi"><span>本次</span><span class="num" id="kThis">00:00:00</span></div>
-      <div class="kpi"><span>总计</span><span class="num" id="kTotal">0小时0分钟</span></div>
-    </div>
-    <div class="detail">
-      <div class="grid" style="margin-top:8px">
-        <div class="box">
-          <div class="label">今天</div>
-          <div id="kDay">0分钟</div>
-        </div>
-        <div class="box">
-          <div class="label">本周（周一-周日）</div>
-          <div id="kWeek">0分钟</div>
-        </div>
-        <div class="box">
-          <div class="label">本月</div>
-          <div id="kMonth">0分钟</div>
-        </div>
-        <div class="box">
-          <div class="label">今年</div>
-          <div id="kYear">0分钟</div>
-        </div>
-      </div>
-      <div style="margin-top:8px" class="label">
-        数据保存在浏览器 localStorage（按自然日累计）。
-      </div>
-    </div>
-  </div>
-
   <audio id="player"></audio>
 
   <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
@@ -355,6 +371,7 @@
 
     const studyCard = $("studyWidget");
     const btnDetail = $("toggleDetail");
+    const btnTimer = $("toggleTimer");
     const kThis = $("kThis");
     const kTotal = $("kTotal");
     const kDay = $("kDay");
@@ -804,6 +821,7 @@
     let sessionSeconds = 0;
     let tickTimer = null;
     let visible = document.visibilityState === "visible";
+    let running = true;  // 是否正在计时
 
     function sumRange(startDate,endDate){
       const s=new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
@@ -831,10 +849,15 @@
     }
 
     function tick(){
-      if(!visible) return;
+      if(!visible || !running) return;
       sessionSeconds += 1;
       const key=todayStr(new Date());
       daily[key]=(daily[key]||0)+1;
+    }
+
+    function setRunning(on){
+      running = on;
+      btnTimer.textContent = on ? "暂停" : "开始";
     }
 
     function startCounting(){
@@ -856,9 +879,15 @@
 
     btnDetail.addEventListener("click",()=>{
       studyCard.classList.toggle("open");
-      btnDetail.textContent = studyCard.classList.contains("open") ? "收起" : "查看详情";
+      btnDetail.textContent = studyCard.classList.contains("open") ? "收起" : "详情";
     });
 
+    btnTimer.addEventListener("click",()=>{
+      setRunning(!running);
+    });
+
+    // 默认进入页面就开始计时
+    setRunning(true);
     startCounting();
   </script>
 </body>
