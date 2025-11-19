@@ -164,7 +164,6 @@
 
     requestAnimationFrame(syncRowHeights);
   }
-
 function highlight(i){
   currentIndex=i;
   [...enCol.children].forEach((el,idx)=> el.classList.toggle("active",idx===i));
@@ -176,7 +175,6 @@ function highlight(i){
   // ★ 每次高亮变化后，重新同步中英文每行的高度
   requestAnimationFrame(syncRowHeights);
 }
-
   // 读取 docx
   docx.addEventListener("change",async(e)=>{
     const f=e.target.files?.[0]; if(!f) return;
