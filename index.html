@@ -210,7 +210,7 @@
     <div class="toolbar">
       <button id="themeBtn" class="toggle-theme" title="切换黑/白模式">🌙 深色</button>
 
-      <!-- 学习时长组件（挨着主题按钮） -->
+      <!-- 学习时长组件 -->
       <div id="studyWidget" class="card study">
         <div class="hdr">
           <div class="title">⏱ 学习时长</div>
@@ -471,19 +471,15 @@
       return cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
     }
 
-    // ⭐ 新增：让中英文每一行高度对齐
+    // 行高对齐：中英每一行同高
     function syncRowHeights() {
       const ens = enCol.children;
       const zhs = zhCol.children;
       const n = Math.min(ens.length, zhs.length);
-
-      // 清空旧的 minHeight
       for (let i = 0; i < n; i++) {
         ens[i].style.minHeight = "";
         zhs[i].style.minHeight = "";
       }
-
-      // 设置每一对中英文的统一高度
       for (let i = 0; i < n; i++) {
         const h = Math.max(ens[i].offsetHeight, zhs[i].offsetHeight);
         ens[i].style.minHeight = h + "px";
@@ -508,7 +504,6 @@
         zhCol.appendChild(z);
       });
 
-      // ⭐ 渲染完成后，对齐高度（下一帧执行，确保 DOM 已经排好）
       requestAnimationFrame(syncRowHeights);
     }
 
@@ -528,89 +523,118 @@
       inputEn.value=value.trim(); updateCount();
     });
 
-    // 翻译
+    // —— 翻译（严格 JSON，对应关系不乱）——
     async function translateBySentence(arr){
-      if(!translateChk.checked) return new Array(arr.length).fill("");
+      const n = arr.length;
+      if(!translateChk.checked) return new Array(n).fill("");
       const key=openaiKeyEl.value.trim();
       if(!key){
         alert("开启了自动翻译，请先填写 OpenAI Key，或先关掉自动翻译");
-        return new Array(arr.length).fill("");
+        return new Array(n).fill("");
       }
       statusEl.textContent="正在逐句翻译…"; hideDiag();
-      const prompt="Translate each English sentence into Simplified Chinese. Return ONLY a JSON array of strings, same length and order as input. No commentary.";
-      const content=arr.map((s,i)=>`${i+1}. ${s}`).join("\n");
-      const res=await fetch("https://api.openai.com/v1/chat/completions",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":`Bearer ${key}`
-        },
-        body:JSON.stringify({
-          model:"gpt-4o-mini",
-          messages:[
-            {role:"system",content:prompt},
-            {role:"user",content}
-          ],
-          temperature:0.2
-        })
-      });
-      if(!res.ok){
-        statusEl.textContent="翻译失败";
-        showDiag("翻译错误："+await res.text());
-        return new Array(arr.length).fill("");
-      }
-      const data=await res.json();
-      const out=data.choices?.[0]?.message?.content||"";
+
+      const payload = {
+        model:"gpt-4o-mini",
+        messages:[
+          {
+            role:"system",
+            content:"You are a translation engine. Given a JSON object {\"sentences\":[...]} you MUST reply ONLY with JSON of the form {\"translations\":[...]} where translations[i] is the Simplified Chinese translation of sentences[i]. Do not merge, split or reorder sentences. No commentary."
+          },
+          {
+            role:"user",
+            content: JSON.stringify({sentences: arr})
+          }
+        ],
+        temperature:0,
+        response_format:{ type:"json_object" }
+      };
+
       try{
-        const s=out.indexOf("["),
-              e=out.lastIndexOf("]");
-        return JSON.parse(out.slice(s,e+1)).map(String);
-      }catch{
-        return out.split(/\n+/).map(x=>x.trim());
+        const res = await fetch("https://api.openai.com/v1/chat/completions",{
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":`Bearer ${key}`
+          },
+          body:JSON.stringify(payload)
+        });
+        if(!res.ok){
+          statusEl.textContent="翻译失败";
+          const txt = await res.text();
+          showDiag("翻译错误："+txt);
+          return new Array(n).fill("");
+        }
+        const data = await res.json();
+        const raw = data.choices?.[0]?.message?.content || "{}";
+        let obj;
+        try{ obj = JSON.parse(raw); } catch{ obj = {}; }
+        let list = Array.isArray(obj.translations) ? obj.translations : [];
+        // 长度不一致时，按索引对齐，不足补空
+        const out = arr.map((_,i)=> (list[i] ?? "").toString());
+        return out;
+      }catch(e){
+        statusEl.textContent="翻译失败";
+        showDiag("翻译异常："+(e?.message||e));
+        return new Array(n).fill("");
       }finally{
         statusEl.textContent="";
       }
     }
 
-    // IPA
+    // —— IPA（严格 JSON，对应关系不乱）——
     async function ipaBySentence(arr){
-      if(!ipaChk.checked) return new Array(arr.length).fill("");
+      const n = arr.length;
+      if(!ipaChk.checked) return new Array(n).fill("");
       const key=openaiKeyEl.value.trim();
       if(!key){
         alert("显示美式音标需要 OpenAI Key（或先关闭“显示美式音标”）");
-        return new Array(arr.length).fill("");
+        return new Array(n).fill("");
       }
       statusEl.textContent="正在生成美式音标…"; hideDiag();
-      const prompt="You are a phonetics assistant. For each English sentence, output its American IPA transcription. Return ONLY a JSON array of strings (no numbering, no extra text). Use IPA symbols; do NOT include surrounding slashes.";
-      const content=arr.join("\n");
-      const res=await fetch("https://api.openai.com/v1/chat/completions",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":`Bearer ${key}`
-        },
-        body:JSON.stringify({
-          model:"gpt-4o-mini",
-          messages:[
-            {role:"system",content:prompt},
-            {role:"user",content}
-          ],
-          temperature:0
-        })
-      });
-      if(!res.ok){
-        statusEl.textContent="音标生成失败";
-        showDiag("音标错误："+await res.text());
-        return new Array(arr.length).fill("");
-      }
-      const data=await res.json();
-      const out=data.choices?.[0]?.message?.content||"";
+
+      const payload = {
+        model:"gpt-4o-mini",
+        messages:[
+          {
+            role:"system",
+            content:"You are an American English phonetics assistant. Given JSON {\"sentences\":[...]} you MUST reply ONLY with JSON {\"ipa\":[...]} where ipa[i] is the American IPA transcription of sentences[i]. Keep 1-to-1 mapping, no merging/splitting/reordering. Do NOT include slashes around the transcription."
+          },
+          {
+            role:"user",
+            content: JSON.stringify({sentences: arr})
+          }
+        ],
+        temperature:0,
+        response_format:{ type:"json_object" }
+      };
+
       try{
-        const s=out.indexOf("["),
-              e=out.lastIndexOf("]");
-        return JSON.parse(out.slice(s,e+1)).map(String);
-      }catch{
-        return new Array(arr.length).fill("");
+        const res = await fetch("https://api.openai.com/v1/chat/completions",{
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":`Bearer ${key}`
+          },
+          body:JSON.stringify(payload)
+        });
+        if(!res.ok){
+          statusEl.textContent="音标生成失败";
+          const txt = await res.text();
+          showDiag("音标错误："+txt);
+          return new Array(n).fill("");
+        }
+        const data = await res.json();
+        const raw = data.choices?.[0]?.message?.content || "{}";
+        let obj;
+        try{ obj = JSON.parse(raw); } catch{ obj = {}; }
+        let list = Array.isArray(obj.ipa) ? obj.ipa : [];
+        const out = arr.map((_,i)=> (list[i] ?? "").toString());
+        return out;
+      }catch(e){
+        statusEl.textContent="音标生成失败";
+        showDiag("音标异常："+(e?.message||e));
+        return new Array(n).fill("");
       }finally{
         statusEl.textContent="";
       }
@@ -845,7 +869,7 @@
     let sessionSeconds = 0;
     let tickTimer = null;
     let visible = document.visibilityState === "visible";
-    let running = true;  // 是否正在计时
+    let running = true;
 
     function sumRange(startDate,endDate){
       const s=new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
@@ -910,7 +934,7 @@
       setRunning(!running);
     });
 
-    // ⭐ 窗口尺寸变化时，重新对齐中英文的行高
+    // 窗口尺寸变化时，重新对齐中英文行高
     window.addEventListener("resize", () => {
       requestAnimationFrame(syncRowHeights);
     });
