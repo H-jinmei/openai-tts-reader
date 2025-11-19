@@ -290,7 +290,7 @@
           <input type="file" id="docx" accept=".docx" />
           <span id="charCount" class="pill">0 chars</span>
         </div>
-        <div class="flex" style="gap:16px">
+        <div class="flex" style="gap:16px;flex-wrap:wrap">
           <label class="flex" style="gap:6px;align-items:center">
             <span>自动翻译中文</span>
             <input id="translateChk" type="checkbox" checked />
@@ -298,6 +298,10 @@
           <label class="flex" style="gap:6px;align-items:center">
             <span>显示美式音标</span>
             <input id="ipaChk" type="checkbox" />
+          </label>
+          <label class="flex" style="gap:6px;align-items:center">
+            <span>朗读时自动生成翻译/音标</span>
+            <input id="autoOnSpeak" type="checkbox" checked />
           </label>
         </div>
       </div>
@@ -316,7 +320,7 @@
         </div>
       </div>
       <div class="flex" style="margin-top:10px;flex-wrap:wrap;gap:10px">
-        <button id="prep" class="btn">拆句 & 翻译音标</button>
+        <button id="prep" class="btn">拆句（不立即翻译）</button>
         <button id="playFromCurrent" class="btn">从当前句开始朗读</button>
         <button id="quickSpeak" class="btn outline">直接朗读整段（浏览器）</button>
         <button id="testSpeak" class="btn outline">测试朗读（Hello）</button>
@@ -350,6 +354,7 @@
     const docx=$("docx");
     const translateChk=$("translateChk");
     const ipaChk=$("ipaChk");
+    const autoOnSpeak=$("autoOnSpeak");
     const engine=$("engine");
     const rate=$("rate");
     const rateVal=$("rateVal");
@@ -384,8 +389,30 @@
       XI:"xiKey",
       XIVOICE:"xiVoice",
       THEME:"study:theme",
-      DAILY:"study:dailySeconds"   // { "YYYY-MM-DD": seconds }
+      DAILY:"study:dailySeconds",
+      SENT_CACHE:"ttsSentenceCacheV1"
     };
+
+    // ====== 句子缓存：同一句只生成一次 ======
+    function loadSentenceCache(){
+      try{
+        const raw = localStorage.getItem(LS_KEYS.SENT_CACHE);
+        if(!raw) return {};
+        const obj = JSON.parse(raw);
+        return obj && typeof obj === "object" ? obj : {};
+      }catch(e){
+        console.warn("加载缓存失败", e);
+        return {};
+      }
+    }
+    function saveSentenceCache(map){
+      try{
+        localStorage.setItem(LS_KEYS.SENT_CACHE, JSON.stringify(map));
+      }catch(e){
+        console.warn("保存缓存失败", e);
+      }
+    }
+    let sentenceCache = loadSentenceCache();
 
     // 读取密钥
     try{
@@ -495,7 +522,7 @@
         const ipa = PH[i] ? `<div class="ipa">/${PH[i]}/</div>` : "";
         d.innerHTML = `<div>${s}</div>${ipa}`;
         d.dataset.idx=i;
-        d.onclick=()=>{highlight(i); speakFrom(i);};
+        d.onclick=()=>onSentenceClick(i);
         enCol.appendChild(d);
 
         const z=document.createElement("div");
@@ -513,8 +540,17 @@
       [...zhCol.children].forEach((el,idx)=> el.classList.toggle("active",idx===i));
       enCol.children[i]?.scrollIntoView({behavior:"smooth",block:"center"});
       zhCol.children[i]?.scrollIntoView({behavior:"smooth",block:"center"});
-      // 每次高亮改变后重新同步行高，防止后面错位
       requestAnimationFrame(syncRowHeights);
+    }
+
+    function onSentenceClick(i){
+      // 点击句子：总是从这里开始朗读
+      highlight(i);
+      // 手动模式：只在点击时生成翻译/音标
+      if(!autoOnSpeak.checked){
+        ensureSentenceProcessed(i);
+      }
+      speakFrom(i);
     }
 
     // 读取 docx
@@ -525,33 +561,55 @@
       inputEn.value=value.trim(); updateCount();
     });
 
-    // === 翻译（带 id 映射，防止错位） ===
-    async function translateBySentence(arr){
-      const n = arr.length;
-      if(!translateChk.checked) return new Array(n).fill("");
-      const key=openaiKeyEl.value.trim();
-      if(!key){
-        alert("开启了自动翻译，请先填写 OpenAI Key，或先关掉自动翻译");
-        return new Array(n).fill("");
-      }
-      statusEl.textContent="正在逐句翻译…"; hideDiag();
+    // ===== 按需生成当前句翻译 & IPA（带缓存） =====
+    async function ensureSentenceProcessed(i){
+      if(i<0 || i>=EN.length) return;
+      if(!translateChk.checked && !ipaChk.checked) return;
 
-      const items = arr.map((text,id)=>({id,text}));
+      const text = EN[i];
+      if(!text) return;
+
+      // 先从缓存里找
+      const cached = sentenceCache[text];
+      if(cached){
+        if(translateChk.checked && cached.zh && !ZH[i]) ZH[i]=cached.zh;
+        if(ipaChk.checked && cached.ipa && !PH[i]) PH[i]=cached.ipa;
+
+        if((!translateChk.checked || cached.zh) &&
+           (!ipaChk.checked || cached.ipa)){
+          renderCols(); highlight(i);
+          return; // 缓存里已经有需要的内容
+        }
+      }
+
+      const key = openaiKeyEl.value.trim();
+      if(!key){
+        alert("生成翻译/音标需要先填写 OpenAI API Key");
+        return;
+      }
+
+      statusEl.textContent="正在生成当前句的翻译和音标…";
+      hideDiag();
+
+      const wantZh = translateChk.checked;
+      const wantIpa = ipaChk.checked;
+
+      const sysPrompt =
+        "You are an assistant for English learning. " +
+        "For a given English sentence, output a JSON object {\"zh\": string, \"ipa\": string}. " +
+        (wantZh ? "Translate the sentence into Simplified Chinese in field 'zh'. " : "Set 'zh' to an empty string. ") +
+        (wantIpa ? "Provide American English IPA transcription (no slashes) in field 'ipa'. "
+                 : "Set 'ipa' to an empty string. ") +
+        "Reply ONLY with valid JSON.";
+
       const payload = {
         model:"gpt-4o-mini",
         messages:[
-          {
-            role:"system",
-            content:
-              "You are a translation engine. Input is JSON {\"items\":[{\"id\":number,\"text\":string}...]}. " +
-              "You MUST reply ONLY with JSON of the form {\"items\":[{\"id\":number,\"zh\":string}...]}. " +
-              "For each input item, keep the same id and translate text into Simplified Chinese. " +
-              "Do not merge, split, drop or reorder ids. No commentary."
-          },
-          { role:"user", content: JSON.stringify({items}) }
+          {role:"system",content:sysPrompt},
+          {role:"user",content:text}
         ],
         temperature:0,
-        response_format:{ type:"json_object" }
+        response_format:{type:"json_object"}
       };
 
       try{
@@ -563,102 +621,40 @@
           },
           body:JSON.stringify(payload)
         });
+
         if(!res.ok){
-          statusEl.textContent="翻译失败";
-          const txt = await res.text();
-          showDiag("翻译错误："+txt);
-          return new Array(n).fill("");
+          const errText = await res.text();
+          statusEl.textContent="生成失败（API 错误）";
+          showDiag("当前句生成失败：" + errText);
+          return;
         }
+
         const data = await res.json();
         const raw = data.choices?.[0]?.message?.content || "{}";
         let obj={};
-        try{ obj = JSON.parse(raw); }catch(e){}
-        const list = Array.isArray(obj.items) ? obj.items : [];
-        const map = {};
-        list.forEach(it=>{
-          if(typeof it.id==="number"){
-            const zh = it.zh ?? it.translation ?? it.cn ?? "";
-            map[it.id] = String(zh);
-          }
-        });
-        return arr.map((_,i)=> map[i] || "");
+        try{ obj = JSON.parse(raw); }catch(e){ obj={}; }
+
+        const zh = typeof obj.zh === "string" ? obj.zh.trim() : "";
+        const ipa = typeof obj.ipa === "string" ? obj.ipa.trim() : "";
+
+        if(wantZh && zh) ZH[i]=zh;
+        if(wantIpa && ipa) PH[i]=ipa;
+
+        sentenceCache[text] = { zh, ipa };
+        saveSentenceCache(sentenceCache);
+
+        renderCols();
+        highlight(i);
       }catch(e){
-        statusEl.textContent="翻译失败";
-        showDiag("翻译异常："+(e?.message||e));
-        return new Array(n).fill("");
+        statusEl.textContent="生成失败（网络异常）";
+        showDiag("当前句生成异常：" + (e?.message || e));
       }finally{
         statusEl.textContent="";
       }
     }
 
-    // === IPA（带 id 映射，防止错位） ===
-    async function ipaBySentence(arr){
-      const n = arr.length;
-      if(!ipaChk.checked) return new Array(n).fill("");
-      const key=openaiKeyEl.value.trim();
-      if(!key){
-        alert("显示美式音标需要 OpenAI Key（或先关闭“显示美式音标”）");
-        return new Array(n).fill("");
-      }
-      statusEl.textContent="正在生成美式音标…"; hideDiag();
-
-      const items = arr.map((text,id)=>({id,text}));
-      const payload = {
-        model:"gpt-4o-mini",
-        messages:[
-          {
-            role:"system",
-            content:
-              "You are an American English phonetics assistant. Input is JSON {\"items\":[{\"id\":number,\"text\":string}...]}. " +
-              "You MUST reply ONLY with JSON {\"items\":[{\"id\":number,\"ipa\":string}...]}. " +
-              "For each input item, keep the same id and output the American IPA transcription of text. " +
-              "Do not merge, split, drop or reorder ids. Do NOT include slashes around the transcription. No commentary."
-          },
-          { role:"user", content: JSON.stringify({items}) }
-        ],
-        temperature:0,
-        response_format:{ type:"json_object" }
-      };
-
-      try{
-        const res = await fetch("https://api.openai.com/v1/chat/completions",{
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json",
-            "Authorization":`Bearer ${key}`
-          },
-          body:JSON.stringify(payload)
-        });
-        if(!res.ok){
-          statusEl.textContent="音标生成失败";
-          const txt = await res.text();
-          showDiag("音标错误："+txt);
-          return new Array(n).fill("");
-        }
-        const data = await res.json();
-        const raw = data.choices?.[0]?.message?.content || "{}";
-        let obj={};
-        try{ obj = JSON.parse(raw); }catch(e){}
-        const list = Array.isArray(obj.items) ? obj.items : [];
-        const map = {};
-        list.forEach(it=>{
-          if(typeof it.id==="number"){
-            const ipa = it.ipa ?? "";
-            map[it.id] = String(ipa);
-          }
-        });
-        return arr.map((_,i)=> map[i] || "");
-      }catch(e){
-        statusEl.textContent="音标生成失败";
-        showDiag("音标异常："+(e?.message||e));
-        return new Array(n).fill("");
-      }finally{
-        statusEl.textContent="";
-      }
-    }
-
-    // 预处理
-    prep.addEventListener("click",async()=>{
+    // 预处理（只拆句 + 尝试用缓存预填）
+    prep.addEventListener("click",()=>{
       const txt=inputEn.value.trim();
       if(!txt){ alert("请先粘贴英文内容"); return; }
       EN=splitSentences(txt);
@@ -668,13 +664,16 @@
       }
       ZH=new Array(EN.length).fill("");
       PH=new Array(EN.length).fill("");
+      // 尝试从缓存中预填
+      EN.forEach((s,i)=>{
+        const cached = sentenceCache[s];
+        if(cached){
+          if(cached.zh) ZH[i]=cached.zh;
+          if(cached.ipa) PH[i]=cached.ipa;
+        }
+      });
       currentIndex=0;
       renderCols(); highlight(0);
-      try{
-        ZH=await translateBySentence(EN);
-        PH=await ipaBySentence(EN);
-        renderCols(); highlight(0);
-      }catch(e){console.error(e);}
     });
 
     // 朗读相关
@@ -692,7 +691,7 @@
         return;
       }
       if(!EN.length){
-        alert("还没有句子可读，请先“拆句 & 翻译音标”");
+        alert("还没有句子可读，请先点击“拆句（不立即翻译）”");
         return;
       }
       if(eng!=="browser"){
@@ -718,6 +717,9 @@
       speechSynthesis.cancel();
       for(let i=start;i<EN.length;i++){
         highlight(i);
+        if(autoOnSpeak.checked){
+          await ensureSentenceProcessed(i);
+        }
         const u=new SpeechSynthesisUtterance(EN[i]);
         u.lang="en-US"; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
         await new Promise(res=>{
@@ -732,6 +734,9 @@
       const key=openaiKeyEl.value.trim();
       for(let i=start;i<EN.length;i++){
         highlight(i);
+        if(autoOnSpeak.checked){
+          await ensureSentenceProcessed(i);
+        }
         const url=await openaiTts(EN[i],key);
         await play(url);
         setBar(((i-start+1)/(EN.length-start))*100);
@@ -762,6 +767,9 @@
       const vid=xiVoiceEl.value.trim();
       for(let i=start;i<EN.length;i++){
         highlight(i);
+        if(autoOnSpeak.checked){
+          await ensureSentenceProcessed(i);
+        }
         const url=await elevenTts(EN[i],key,vid);
         await play(url);
         setBar(((i-start+1)/(EN.length-start))*100);
