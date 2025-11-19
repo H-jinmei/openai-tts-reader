@@ -471,6 +471,26 @@
       return cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
     }
 
+    // ⭐ 新增：让中英文每一行高度对齐
+    function syncRowHeights() {
+      const ens = enCol.children;
+      const zhs = zhCol.children;
+      const n = Math.min(ens.length, zhs.length);
+
+      // 清空旧的 minHeight
+      for (let i = 0; i < n; i++) {
+        ens[i].style.minHeight = "";
+        zhs[i].style.minHeight = "";
+      }
+
+      // 设置每一对中英文的统一高度
+      for (let i = 0; i < n; i++) {
+        const h = Math.max(ens[i].offsetHeight, zhs[i].offsetHeight);
+        ens[i].style.minHeight = h + "px";
+        zhs[i].style.minHeight = h + "px";
+      }
+    }
+
     function renderCols(){
       enCol.innerHTML=""; zhCol.innerHTML="";
       EN.forEach((s,i)=>{
@@ -487,7 +507,11 @@
         z.textContent=ZH[i]||"";
         zhCol.appendChild(z);
       });
+
+      // ⭐ 渲染完成后，对齐高度（下一帧执行，确保 DOM 已经排好）
+      requestAnimationFrame(syncRowHeights);
     }
+
     function highlight(i){
       currentIndex=i;
       [...enCol.children].forEach((el,idx)=> el.classList.toggle("active",idx===i));
@@ -884,6 +908,11 @@
 
     btnTimer.addEventListener("click",()=>{
       setRunning(!running);
+    });
+
+    // ⭐ 窗口尺寸变化时，重新对齐中英文的行高
+    window.addEventListener("resize", () => {
+      requestAnimationFrame(syncRowHeights);
     });
 
     // 默认进入页面就开始计时
