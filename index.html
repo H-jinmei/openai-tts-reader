@@ -1,72 +1,74 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>英文朗读 + 中英同步（OpenAI / 浏览器）</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root{
-      --c:#2563eb;--g:#10b981;--b:#0ea5e9;
+      --c:#2563eb;--b:#0ea5e9;
       --bg:#f8fafc;--txt:#0f172a;--muted:#64748b;
-      --card:#ffffff;--border:#e5e7eb;--shadow:0 2px 4px rgba(0,0,0,.05);
-      --chip-bg:#eef2ff;--chip-txt:#3730a3;--chip-bd:#c7d2fe;
+      --card:#ffffff;--border:#e5e7eb;--shadow:0 2px 6px rgba(15,23,42,.06);
+      --chip-bg:#e0edff;--chip-txt:#1d4ed8;
       --accent-soft:#eef2ff;--accent-bd:#a5b4fc;--accent-txt:#4338ca;
-      --green-soft:#ecfdf5;--green-bd:#a7f3d0;--green-txt:#065f46;
+      --green-soft:#ecfdf5;--green-bd:#6ee7b7;--green-txt:#065f46;
     }
     .dark{
       --bg:#020617;--txt:#e5e7eb;--muted:#9ca3af;
-      --card:#020617;--border:#1f2937;--shadow:0 2px 10px rgba(0,0,0,.35);
-      --chip-bg:#0b1120;--chip-txt:#93c5fd;--chip-bd:#1d4ed8;
+      --card:#020617;--border:#1f2937;--shadow:0 2px 14px rgba(0,0,0,.45);
+      --chip-bg:#0b1120;--chip-txt:#93c5fd;
       --accent-soft:#0b1220;--accent-bd:#1d4ed8;--accent-txt:#93c5fd;
-      --green-soft:#022c22;--green-bd:#0d9488;--green-txt:#99f6e4;
+      --green-soft:#022c22;--green-bd:#0f766e;--green-txt:#a7f3d0;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
       background:var(--bg);
       color:var(--txt);
-      margin:0;
     }
-    .wrap{max-width:1100px;margin:auto;padding:24px}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 40px}
     h1{
+      font-size:22px;
+      margin:0 0 8px;
       display:flex;
       align-items:center;
       gap:10px;
-      font-size:22px;
       color:var(--c);
-      margin:0 0 12px;
     }
+    .sub{font-size:13px;color:var(--muted);margin-bottom:16px}
     .card{
       background:var(--card);
-      border:1px solid var(--border);
       border-radius:16px;
-      padding:16px;
-      margin:12px 0;
+      border:1px solid var(--border);
       box-shadow:var(--shadow);
+      padding:14px 16px;
+      margin-top:14px;
     }
-    .row{display:grid;gap:12px}
-    @media(min-width:800px){.grid-2{grid-template-columns:1fr 1fr}}
-    label{font-weight:600}
+    label{font-size:14px;font-weight:600}
     input,textarea,select{
-      width:100%;
-      padding:10px;
-      border:1px solid #cbd5e1;
-      border-radius:10px;
+      font-family:inherit;
       font-size:14px;
+      border-radius:10px;
+      border:1px solid #cbd5e1;
+      padding:8px 10px;
+      width:100%;
       background:transparent;
       color:inherit;
     }
-    textarea{min-height:140px}
-    small{color:var(--muted)}
+    textarea{min-height:150px;resize:vertical}
+    small{color:var(--muted);font-size:12px}
+    .flex{display:flex;align-items:center;gap:8px}
+    .between{justify-content:space-between}
     .btn{
+      border-radius:999px;
+      border:none;
+      padding:7px 14px;
+      font-size:13px;
+      cursor:pointer;
       background:var(--c);
       color:#fff;
-      border:none;
-      padding:8px 12px;
-      border-radius:10px;
-      cursor:pointer;
-      font-size:12px;
       white-space:nowrap;
     }
     .btn.outline{
@@ -75,771 +77,627 @@
       border:1px solid #cbd5e1;
     }
     .btn:disabled{opacity:.5;cursor:not-allowed}
-    .flex{display:flex;align-items:center;gap:10px}
-    .between{justify-content:space-between}
-    .pill{
-      display:inline-block;
-      background:var(--chip-bg);
-      color:var(--chip-txt);
-      border:1px solid var(--chip-bd);
-      border-radius:999px;
-      padding:3px 10px;
-      font-size:12px;
-    }
-    .slider{width:220px}
-    .note{font-size:12px;color:#0f766e}
-
-    /* 顶部工具栏：主题 + 计时器 */
     .toolbar{
       display:flex;
-      align-items:center;
-      justify-content:flex-end;
-      gap:10px;
-      margin-bottom:8px;
-      flex-wrap:wrap;
-    }
-    .toggle-theme{
-      background:transparent;
-      border:1px solid var(--border);
-      color:var(--txt);
-      padding:8px 12px;
-      border-radius:999px;
-      cursor:pointer;
-      font-size:13px;
-    }
-
-    /* 学习时长小组件 */
-    .study.card{
-      margin:0;
-      padding:8px 12px;
-    }
-    .study{
-      max-width:460px;
-    }
-    .study .hdr{
-      display:flex;
-      align-items:center;
       justify-content:space-between;
-      margin-bottom:4px;
-      gap:8px;
-    }
-    .study .title{font-weight:700;font-size:13px}
-    .study .hdr-btns{
-      display:flex;
-      gap:6px;
-      flex-shrink:0;
-    }
-    .study .hdr-btns .btn{
-      padding:4px 8px;
-      font-size:11px;
-    }
-    .study .compact{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
       align-items:center;
+      margin-bottom:10px;
+      gap:10px;
+      flex-wrap:wrap;
     }
-    .study .kpi{
-      display:flex;
-      gap:6px;
-      align-items:baseline;
-      background:var(--chip-bg);
-      border:1px solid var(--chip-bd);
-      color:var(--chip-txt);
-      padding:4px 10px;
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:3px 10px;
       border-radius:999px;
-      font-size:11px;
-    }
-    .study .kpi .num{font-weight:800}
-    .study .detail{display:none;margin-top:8px}
-    .study.open .detail{display:block}
-    .study .grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:8px;
-    }
-    .study .box{
-      padding:8px;
-      border:1px solid var(--border);
-      border-radius:10px;
+      border:1px solid var(--chip-bg);
+      background:var(--chip-bg);
+      color:var(--chip-txt);
       font-size:12px;
     }
-    .study .label{font-size:11px;color:var(--muted)}
-
-    /* 句子列表（严格一行一对） */
-    .sent-wrap{
+    .timer{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:12px;
+    }
+    .timer span.time{
+      font-variant-numeric:tabular-nums;
+      font-weight:600;
+    }
+    .rows{
+      margin-top:10px;
       max-height:60vh;
       overflow:auto;
+      border-radius:12px;
+      border:1px solid var(--border);
     }
-    .sent-row{
+    .row{
       display:grid;
-      grid-template-columns:1.4fr 1fr;
-      gap:12px;
-      padding:10px;
-      border-radius:10px;
-      border:1px solid transparent;
+      grid-template-columns:minmax(0,1.4fr) minmax(0,1.1fr);
+      gap:8px;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(148,163,184,.35);
       cursor:pointer;
-      transition:.15s;
     }
-    .sent-row:hover{
-      background:rgba(15,23,42,0.03);
-      border-color:#e2e8f0;
+    .row:last-child{border-bottom:none}
+    .row:hover{
+      background:rgba(148,163,184,.06);
     }
-    .dark .sent-row:hover{
-      background:rgba(148,163,184,0.1);
-      border-color:#334155;
-    }
-    .sent-row.active{
+    .row.active{
       background:var(--accent-soft);
       border-color:var(--accent-bd);
       color:var(--accent-txt);
     }
-    .cell-en, .cell-zh{
+    .row .zh{
       display:flex;
-      flex-direction:column;
-      gap:4px;
+      align-items:center;
+      color:inherit;
     }
-    .en-text{font-size:15px;}
-    .ipa{font-size:12px;color:#475569}
-    .dark .ipa{color:#9ca3af;}
+    .en-main{font-size:14px;margin-bottom:3px}
+    .ipa{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .zh-text{font-size:14px}
+    .status{font-size:12px;color:var(--muted);margin-top:6px}
+    .bad{color:#b91c1c}
+    .good{color:#0f766e}
+    .checks{
+      display:flex;
+      gap:20px;
+      margin-top:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .checks label{
+      font-weight:500;
+      font-size:13px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .top-controls{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    .top-controls .left,
+    .top-controls .right{display:flex;gap:8px;flex-wrap:wrap}
+    .chip-note{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:4px;
+    }
+    .api-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    .api-row select{width:auto}
+    @media (max-width:720px){
+      .row{grid-template-columns:1fr}
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- 顶部工具栏：主题 + 计时器 -->
-    <div class="toolbar">
-      <button id="themeBtn" class="toggle-theme" title="切换黑/白模式">🌙 深色</button>
-
-      <!-- 学习时长组件 -->
-      <div id="studyWidget" class="card study">
-        <div class="hdr">
-          <div class="title">⏱ 学习时长</div>
-          <div class="hdr-btns">
-            <button id="toggleTimer" class="btn outline">暂停</button>
-            <button id="toggleDetail" class="btn outline">详情</button>
-          </div>
-        </div>
-        <div class="compact">
-          <div class="kpi"><span>本次</span><span class="num" id="kThis">00:00:00</span></div>
-          <div class="kpi"><span>总计</span><span class="num" id="kTotal">0小时0分钟</span></div>
-        </div>
-        <div class="detail">
-          <div class="grid" style="margin-top:8px">
-            <div class="box">
-              <div class="label">今天</div>
-              <div id="kDay">0分钟</div>
-            </div>
-            <div class="box">
-              <div class="label">本周（周一-周日）</div>
-              <div id="kWeek">0分钟</div>
-            </div>
-            <div class="box">
-              <div class="label">本月</div>
-              <div id="kMonth">0分钟</div>
-            </div>
-            <div class="box">
-              <div class="label">今年</div>
-              <div id="kYear">0分钟</div>
-            </div>
-          </div>
-          <div style="margin-top:8px" class="label">
-            已启用「按需翻译 + 按需音标」的省算力模式：只有当你点到某一句或朗读到那一句时，才会向 API 请求。
-          </div>
-        </div>
-      </div>
+<div class="wrap">
+  <div class="toolbar">
+    <div>
+      <h1>🎧 英文朗读 + 中英同步（OpenAI / 浏览器）</h1>
+      <div class="sub">支持按句精准朗读、懒加载翻译和音标，尽量节省 API 额度。</div>
     </div>
-
-    <h1>🎧 英文朗读 + 中英同步（OpenAI / 浏览器）</h1>
-
-    <!-- Key -->
-    <div class="card">
-      <label>API Key（用于翻译 & 生成美式音标 & OpenAI TTS）</label>
-      <div class="row">
-        <input id="openaiKey" type="password" placeholder="在这里填 OpenAI 或 APIMart 的 sk-... 密钥（仅保存在本地浏览器）" />
-        <div class="flex between">
-          <small>提示：现在这里既可以填 OpenAI 官方 Key，也可以填 APIMart 的代理 Key。</small>
-          <button id="saveKeys" class="btn outline">保存设置</button>
-        </div>
-        <div id="saveHint" style="display:none;color:#16a34a;font-size:12px">已保存到本地 ✓</div>
-      </div>
-    </div>
-
-    <!-- 输入 & 引擎 -->
-    <div class="card">
-      <label>英文内容（粘贴或上传 .docx）</label>
-      <textarea id="inputEn" placeholder="Paste your English text here..."></textarea>
-      <div class="flex between">
-        <div class="flex">
-          <input type="file" id="docx" accept=".docx" />
-          <span id="charCount" class="pill">0 chars</span>
-        </div>
-        <div class="flex" style="gap:16px">
-          <label class="flex" style="gap:6px;align-items:center">
-            <span>自动翻译中文</span>
-            <input id="translateChk" type="checkbox" checked />
-          </label>
-          <label class="flex" style="gap:6px;align-items:center">
-            <span>显示美式音标</span>
-            <input id="ipaChk" type="checkbox" checked />
-          </label>
-        </div>
-      </div>
-      <div class="flex between" style="margin-top:10px">
-        <div class="flex">
-          <label>朗读引擎：</label>
-          <select id="engine">
-            <option value="browser">浏览器（免费）</option>
-            <option value="openai">OpenAI TTS（走 APIMart 代理 或 官方）</option>
-          </select>
-        </div>
-        <div class="flex">
-          <label>速度：<span id="rateVal">1.00x</span></label>
-          <input id="rate" class="slider" type="range" min="0.6" max="1.4" step="0.05" value="1.0" />
-        </div>
-      </div>
-      <div class="flex" style="margin-top:10px;flex-wrap:wrap;gap:10px">
-        <button id="prep" class="btn">拆句（不立即翻译）</button>
-        <button id="playFromCurrent" class="btn">从当前句开始朗读</button>
-        <button id="quickSpeak" class="btn outline">直接朗读整段（浏览器）</button>
-        <button id="testSpeak" class="btn outline">测试朗读（Hello）</button>
-        <button id="stop" class="btn outline">停止</button>
-      </div>
-      <div id="status" style="margin-top:8px;color:#334155"></div>
-      <div class="progress" style="margin-top:8px;display:none">
-        <div class="bar" id="bar"></div>
-      </div>
-      <div id="diag" class="note" style="display:none;margin-top:8px"></div>
-    </div>
-
-    <!-- 中英同步列表 -->
-    <div class="card">
-      <div class="sent-wrap">
-        <div id="sentList"></div>
+    <div class="flex" style="gap:10px">
+      <button id="themeBtn" class="btn outline">🌙 深色</button>
+      <div class="pill">
+        ⏱ 学习时长
+        <span id="timerNow" class="time">00:00:00</span>
+        <button id="timerToggle" class="btn outline" style="padding:2px 8px;font-size:11px">开始</button>
       </div>
     </div>
   </div>
 
-  <audio id="player"></audio>
+  <div class="card">
+    <label for="apiKey">API Key（用于翻译 / 音标 / OpenAI TTS）</label>
+    <input id="apiKey" type="password" placeholder="sk-...  可填 OpenAI 官方 Key 或 APIMart 代理 Key（仅保存在本地）">
+    <div class="api-row">
+      <small>说明：只在需要翻译、音标或 OpenAI TTS 时才会用到。</small>
+    </div>
+    <button id="saveKey" class="btn outline" style="margin-top:6px">保存到本地</button>
+    <div id="saveHint" class="chip-note" style="display:none;color:#16a34a">已保存 ✓</div>
+  </div>
 
-  <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
-  <script>
-    const $ = id => document.getElementById(id);
+  <div class="card">
+    <label for="inputEn">英文内容（粘贴或上传 .docx）</label>
+    <textarea id="inputEn" placeholder="Paste your English text here..."></textarea>
+    <div class="top-controls">
+      <div class="left">
+        <div class="flex">
+          <input type="file" id="docx" accept=".docx">
+          <span id="charCount" class="pill">0 chars</span>
+        </div>
+      </div>
+      <div class="right">
+        <div class="checks">
+          <label>
+            <input type="checkbox" id="autoZh" checked>
+            自动翻译中文（懒加载，每句只翻一次）
+          </label>
+          <label>
+            <input type="checkbox" id="autoIpa" />
+            显示美式音标（懒加载，每句只生成一次）
+          </label>
+        </div>
+      </div>
+    </div>
 
-    const openaiKeyEl=$("openaiKey");
-    const inputEn=$("inputEn");
-    const docx=$("docx");
-    const translateChk=$("translateChk");
-    const ipaChk=$("ipaChk");
-    const engine=$("engine");
-    const rate=$("rate");
-    const rateVal=$("rateVal");
-    const prep=$("prep");
-    const playFromCurrent=$("playFromCurrent");
-    const quickSpeak=$("quickSpeak");
-    const testSpeak=$("testSpeak");
-    const stopBtn=$("stop");
-    const statusEl=$("status");
-    const sentList=$("sentList");
-    const player=$("player");
-    const bar=$("bar");
-    const progressWrap=document.querySelector(".progress");
-    const charCount=$("charCount");
-    const diag=$("diag");
+    <div class="top-controls" style="margin-top:10px">
+      <div class="left flex">
+        <label>朗读引擎：</label>
+        <select id="engine">
+          <option value="browser">浏览器（免费）</option>
+          <option value="openai">OpenAI / APIMart TTS</option>
+        </select>
+        <label>速度：<span id="rateVal">1.00x</span></label>
+        <input id="rate" type="range" min="0.7" max="1.4" step="0.05" value="1.0">
+      </div>
+      <div class="right">
+        <button id="splitBtn" class="btn">拆句（不立即翻译）</button>
+        <button id="readFromCurrent" class="btn">从当前句开始朗读</button>
+        <button id="readAllBrowser" class="btn outline">直接朗读整段（浏览器）</button>
+        <button id="testSpeak" class="btn outline">测试朗读（Hello）</button>
+        <button id="stopBtn" class="btn outline">停止</button>
+      </div>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
 
-    const themeBtn = $("themeBtn");
+  <div class="card">
+    <div id="rowsBox" class="rows"></div>
+  </div>
+</div>
 
-    const studyCard = $("studyWidget");
-    const btnDetail = $("toggleDetail");
-    const btnTimer = $("toggleTimer");
-    const kThis = $("kThis");
-    const kTotal = $("kTotal");
-    const kDay = $("kDay");
-    const kWeek = $("kWeek");
-    const kMonth = $("kMonth");
-    const kYear = $("kYear");
+<script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function(){
 
-    const LS_KEYS = {
-      OPENAI:"openaiKey",
-      THEME:"study:theme",
-      DAILY:"study:dailySeconds"
-    };
+  function $(id){return document.getElementById(id);}
 
-    // ⭐ OpenAI / APIMart 基础地址
-    // 如果以后改回官方 OpenAI，只需要改成 "https://api.openai.com"
-    const OPENAI_BASE = "https://api.apimart.ai";
+  const apiKeyInput = $("apiKey");
+  const saveKeyBtn = $("saveKey");
+  const saveHint = $("saveHint");
+  const inputEn = $("inputEn");
+  const docxInput = $("docx");
+  const autoZhChk = $("autoZh");
+  const autoIpaChk = $("autoIpa");
+  const engineSel = $("engine");
+  const rateRange = $("rate");
+  const rateVal = $("rateVal");
+  const splitBtn = $("splitBtn");
+  const readFromCurrentBtn = $("readFromCurrent");
+  const readAllBrowserBtn = $("readAllBrowser");
+  const testSpeakBtn = $("testSpeak");
+  const stopBtn = $("stopBtn");
+  const rowsBox = $("rowsBox");
+  const statusEl = $("status");
+  const charCount = $("charCount");
+  const themeBtn = $("themeBtn");
+  const timerNow = $("timerNow");
+  const timerToggle = $("timerToggle");
 
-    // 读取密钥
+  const LS_KEY = "openaitts.apiKey";
+  const LS_THEME = "openaitts.theme";
+  const LS_TIMER = "openaitts.dailySeconds";
+
+  // ====== 恢复本地 Key ======
+  try{
+    const stored = localStorage.getItem(LS_KEY);
+    if(stored) apiKeyInput.value = stored;
+  }catch(e){}
+
+  saveKeyBtn.addEventListener("click", function(){
     try{
-      openaiKeyEl.value=localStorage.getItem(LS_KEYS.OPENAI)||"";
-    }catch(e){console.warn("localStorage 不可用：",e);}
-
-    $("saveKeys").addEventListener("click",()=>{
-      try{
-        const ok=openaiKeyEl.value.trim().replace(/^["']|["']$/g,"");
-        localStorage.setItem(LS_KEYS.OPENAI,ok);
-        openaiKeyEl.value=ok;
-        const hint=$("saveHint");
-        hint.style.display="block";
-        setTimeout(()=>hint.style.display="none",1600);
-      }catch(e){ alert("无法保存：浏览器禁止了本地存储或处于隐私模式"); }
-    });
-
-    // 主题切换
-    function applyTheme(theme){
-      document.body.classList.toggle("dark", theme==="dark");
-      themeBtn.textContent = theme==="dark" ? "☀️ 浅色" : "🌙 深色";
-      localStorage.setItem(LS_KEYS.THEME, theme);
+      localStorage.setItem(LS_KEY, apiKeyInput.value.trim());
+      saveHint.style.display = "block";
+      setTimeout(function(){saveHint.style.display="none";},1500);
+    }catch(e){
+      alert("浏览器禁止了本地存储，无法保存 Key");
     }
-    (function initTheme(){
-      const saved = localStorage.getItem(LS_KEYS.THEME);
-      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const theme = saved || (prefersDark ? "dark" : "light");
-      applyTheme(theme);
-    })();
-    themeBtn.addEventListener("click",()=>{
-      const current = document.body.classList.contains("dark") ? "dark" : "light";
-      applyTheme(current==="dark" ? "light" : "dark");
-    });
+  });
 
-    // 工具函数
-    const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
-    function updateCount(){ charCount.textContent=(inputEn.value||"").length+" chars"; }
-    ["input","change","keyup","paste"].forEach(ev=> inputEn.addEventListener(ev,updateCount));
-    updateCount();
-    rate.addEventListener("input",()=>{rateVal.textContent=Number(rate.value).toFixed(2)+"x";});
-
-    function showDiag(msg){ diag.textContent=msg; diag.style.display="block"; }
-    function hideDiag(){ diag.style.display="none"; diag.textContent=""; }
-
-    function ensureVoicesLoaded(timeout=2000){
-      return new Promise((resolve)=>{
-        const have=()=> speechSynthesis.getVoices().length>0;
-        if(have()) return resolve(true);
-        const id=setInterval(()=>{
-          if(have()){clearInterval(id); resolve(true);}
-        },150);
-        setTimeout(()=>{clearInterval(id); resolve(true);},timeout);
-      });
+  // ====== 主题切换 ======
+  function applyTheme(t){
+    if(t === "dark"){
+      document.body.classList.add("dark");
+      themeBtn.textContent = "☀️ 浅色";
+    }else{
+      document.body.classList.remove("dark");
+      themeBtn.textContent = "🌙 深色";
     }
+    try{localStorage.setItem(LS_THEME,t);}catch(e){}
+  }
+  (function initTheme(){
+    let t = "light";
+    try{
+      const s = localStorage.getItem(LS_THEME);
+      if(s) t = s;
+      else if(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches){
+        t = "dark";
+      }
+    }catch(e){}
+    applyTheme(t);
+  })();
+  themeBtn.addEventListener("click",function(){
+    const now = document.body.classList.contains("dark") ? "dark":"light";
+    applyTheme(now==="dark"?"light":"dark");
+  });
 
-    // === 句子数据 ===
-    let EN = [];          // 英文句子
-    let META = [];        // 每句 { zh, ipa }
-    let currentIndex = 0;
-    let isSpeaking=false;
+  // ====== 字数统计 ======
+  function updateCharCount(){
+    charCount.textContent = (inputEn.value || "").length + " chars";
+  }
+  ["input","change","keyup","paste"].forEach(function(ev){
+    inputEn.addEventListener(ev,updateCharCount);
+  });
+  updateCharCount();
 
-    function splitSentences(txt){
-      const cleaned=(txt||"").replace(/\s+/g," ").trim();
-      if(!cleaned) return [];
-      return cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
+  // ====== 计时器 ======
+  let sessionSeconds = 0;
+  let running = false;
+  let timerId = null;
+  function fmt(sec){
+    sec = Math.max(0,Math.floor(sec));
+    var h = Math.floor(sec/3600);
+    var m = Math.floor((sec%3600)/60);
+    var s = sec%60;
+    function pad(n){return (n<10?"0":"")+n;}
+    return pad(h)+":"+pad(m)+":"+pad(s);
+  }
+  function renderTimer(){
+    timerNow.textContent = fmt(sessionSeconds);
+  }
+  function tick(){
+    if(!running) return;
+    sessionSeconds += 1;
+    renderTimer();
+  }
+  timerToggle.addEventListener("click",function(){
+    running = !running;
+    timerToggle.textContent = running ? "暂停" : "开始";
+  });
+  timerId = setInterval(tick,1000);
+  renderTimer();
+
+  // ====== 文本拆句 / 显示区域 ======
+  let EN = [];
+  let currentIndex = 0;
+  let cacheZH = {};   // text -> zh
+  let cacheIPA = {};  // text -> ipa
+  let cacheTTS = {};  // text -> objectURL
+  let isSpeaking = false;
+  const audio = new Audio();
+
+  function splitSentences(txt){
+    var cleaned = (txt || "").replace(/\s+/g," ").trim();
+    if(!cleaned) return [];
+    var arr = cleaned.split(/(?<=[.!?])\s+/);
+    return arr.filter(function(s){return s.trim().length>0;});
+  }
+
+  function renderRows(){
+    rowsBox.innerHTML = "";
+    if(!EN.length){
+      return;
     }
+    for(var i=0;i<EN.length;i++){
+      (function(i){
+        var row = document.createElement("div");
+        row.className = "row" + (i===currentIndex?" active":"");
+        row.dataset.index = i;
 
-    function renderList(){
-      sentList.innerHTML="";
-      EN.forEach((s,i)=>{
-        const row=document.createElement("div");
-        row.className="sent-row";
-        row.dataset.idx=i;
+        var enDiv = document.createElement("div");
+        var enMain = document.createElement("div");
+        enMain.className = "en-main";
+        enMain.textContent = EN[i];
+        var ipaDiv = document.createElement("div");
+        ipaDiv.className = "ipa";
+        ipaDiv.textContent = cacheIPA[EN[i]] ? ("/"+cacheIPA[EN[i]]+"/") : "";
+        enDiv.appendChild(enMain);
+        enDiv.appendChild(ipaDiv);
 
-        const cellEn=document.createElement("div");
-        cellEn.className="cell-en";
-        const enText=document.createElement("div");
-        enText.className="en-text";
-        enText.textContent=s;
-        const ipaDiv=document.createElement("div");
-        ipaDiv.className="ipa";
-        ipaDiv.id=`ipa-${i}`;
-        cellEn.appendChild(enText);
-        cellEn.appendChild(ipaDiv);
+        var zhDiv = document.createElement("div");
+        zhDiv.className = "zh";
+        var zhText = document.createElement("div");
+        zhText.className = "zh-text";
+        zhText.textContent = cacheZH[EN[i]] || "";
+        zhDiv.appendChild(zhText);
 
-        const cellZh=document.createElement("div");
-        cellZh.className="cell-zh";
-        const zhDiv=document.createElement("div");
-        zhDiv.id=`zh-${i}`;
-        cellZh.appendChild(zhDiv);
+        row.appendChild(enDiv);
+        row.appendChild(zhDiv);
 
-        row.appendChild(cellEn);
-        row.appendChild(cellZh);
-
-        row.addEventListener("click",async ()=>{
-          highlight(i);
-          await ensureZhIpa(i);
+        row.addEventListener("click",function(){
+          setActive(i);
+          ensureZHAndIPA(i);
         });
 
-        sentList.appendChild(row);
+        rowsBox.appendChild(row);
+      })(i);
+    }
+  }
+
+  function refreshRow(i){
+    var rows = rowsBox.querySelectorAll(".row");
+    if(!rows[i]) return;
+    var enText = EN[i];
+    var ipa = cacheIPA[enText] || "";
+    var zh = cacheZH[enText] || "";
+    var ipaDiv = rows[i].querySelector(".ipa");
+    var zhDiv = rows[i].querySelector(".zh-text");
+    ipaDiv.textContent = ipa ? ("/"+ipa+"/") : "";
+    zhDiv.textContent = zh;
+  }
+
+  function setActive(i){
+    currentIndex = i;
+    var rows = rowsBox.querySelectorAll(".row");
+    for(var k=0;k<rows.length;k++){
+      rows[k].classList.toggle("active",k===i);
+    }
+    var row = rows[i];
+    if(row){
+      row.scrollIntoView({behavior:"smooth",block:"center"});
+    }
+  }
+
+  splitBtn.addEventListener("click",function(){
+    var txt = inputEn.value.trim();
+    if(!txt){
+      alert("请先粘贴英文内容");
+      return;
+    }
+    EN = splitSentences(txt);
+    if(!EN.length){
+      alert("未检测到完整句子（请检查是否有句号/问号等结束符）");
+      return;
+    }
+    currentIndex = 0;
+    cacheZH = {};
+    cacheIPA = {};
+    cacheTTS = {};
+    statusEl.textContent = "已拆分 "+EN.length+" 句。点某一句时再懒加载翻译和音标。";
+    renderRows();
+    setActive(0);
+  });
+
+  // ====== 文件读取 .docx ======
+  docxInput.addEventListener("change", function(ev){
+    var f = ev.target.files && ev.target.files[0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var arrayBuffer = e.target.result;
+      window.mammoth.extractRawText({arrayBuffer:arrayBuffer})
+      .then(function(res){
+        inputEn.value = res.value || "";
+        updateCharCount();
+      })
+      .catch(function(err){
+        alert("解析 docx 出错："+err);
       });
-      updateAllRows();
-      highlight(0);
-    }
+    };
+    reader.readAsArrayBuffer(f);
+  });
 
-    function updateRow(i){
-      const meta = META[i] || {};
-      const ipaEl = document.getElementById(`ipa-${i}`);
-      const zhEl  = document.getElementById(`zh-${i}`);
-      if(ipaEl){
-        ipaEl.textContent = meta.ipa && ipaChk.checked ? `/${meta.ipa}/` : "";
-      }
-      if(zhEl){
-        zhEl.textContent = meta.zh && translateChk.checked ? meta.zh : "";
-      }
+  // ====== OpenAI / APIMart Chat 辅助函数 ======
+  function getBaseURL(){
+    // 如果你以后想固定使用 APIMart，可以把这里直接 return "https://api.apimart.com";
+    // 目前先按 Key 来源简单区分：包含 "apimart" 字样时走代理
+    var key = apiKeyInput.value.trim();
+    if(/apimart/i.test(key)){
+      return "https://api.apimart.com";
     }
+    return "https://api.openai.com";
+  }
 
-    function updateAllRows(){
-      EN.forEach((_,i)=>updateRow(i));
+  function getHeaders(){
+    var key = apiKeyInput.value.trim();
+    return {
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+key
+    };
+  }
+
+  function needAPI(){
+    if(!apiKeyInput.value.trim()){
+      alert("此操作需要 API Key，请先在顶部输入并保存。");
+      return false;
     }
+    return true;
+  }
 
-    function highlight(i){
-      currentIndex=i;
-      document.querySelectorAll(".sent-row").forEach(row=>{
-        row.classList.toggle("active", Number(row.dataset.idx)===i);
-      });
-      const row=document.querySelector(`.sent-row[data-idx="${i}"]`);
-      row?.scrollIntoView({behavior:"smooth",block:"center"});
-    }
-
-    // 读取 docx
-    docx.addEventListener("change",async(e)=>{
-      const f=e.target.files?.[0]; if(!f) return;
-      const buf=await f.arrayBuffer();
-      const {value}=await window.mammoth.extractRawText({arrayBuffer:buf});
-      inputEn.value=value.trim(); updateCount();
+  async function callChat(messages){
+    var base = getBaseURL();
+    var res = await fetch(base+"/v1/chat/completions",{
+      method:"POST",
+      headers:getHeaders(),
+      body:JSON.stringify({
+        model:"gpt-4o-mini",
+        messages:messages,
+        temperature:0.2
+      })
     });
-
-    // ⭐ 单句：翻译 + 音标（极省算力）
-    async function ensureZhIpa(i){
-      if(!EN[i]) return;
-      const meta = META[i] || (META[i]={zh:"",ipa:""});
-
-      const needZh  = translateChk.checked && !meta.zh;
-      const needIpa = ipaChk.checked && !meta.ipa;
-
-      if(!needZh && !needIpa){
-        updateRow(i);
-        return;
-      }
-
-      const key=openaiKeyEl.value.trim();
-      if(!key){
-        alert("使用翻译 / 音标 / OpenAI 语音前，请先填写 API Key");
-        throw new Error("Missing API key");
-      }
-
-      statusEl.textContent=`正在为第 ${i+1} 句生成翻译和音标…`;
-      hideDiag();
-
-      const prompt = `
-You are an English learning assistant.
-Given ONE English sentence, respond ONLY with a JSON object like:
-{"zh":"<Chinese translation>","ipa":"<American IPA without slashes>"}.
-Use Simplified Chinese for "zh".
-Do NOT add any extra text or explanation.`;
-
-      const sentence = EN[i];
-
-      const res = await fetch(\`\${OPENAI_BASE}/v1/chat/completions\`,{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":\`Bearer \${key}\`
-        },
-        body:JSON.stringify({
-          model:"gpt-4o-mini",
-          messages:[
-            {role:"system",content:prompt},
-            {role:"user",content:sentence}
-          ],
-          temperature:0.1
-        })
-      });
-
-      if(!res.ok){
-        statusEl.textContent="";
-        showDiag("翻译/音标错误："+await res.text());
-        return;
-      }
-
-      const data=await res.json();
-      const out=data.choices?.[0]?.message?.content||"";
-      try{
-        const jsonStart = out.indexOf("{");
-        const jsonEnd   = out.lastIndexOf("}");
-        const obj = JSON.parse(out.slice(jsonStart,jsonEnd+1));
-        if(obj.zh)  meta.zh  = String(obj.zh);
-        if(obj.ipa) meta.ipa = String(obj.ipa);
-      }catch(e){
-        console.warn("解析 JSON 失败：",out,e);
-      }finally{
-        statusEl.textContent="";
-        updateRow(i);
-      }
+    if(!res.ok){
+      var t = await res.text();
+      throw new Error(t);
     }
+    var data = await res.json();
+    var content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    return content || "";
+  }
 
-    // 预处理：只拆句，不立刻调用 API（省算力）
-    prep.addEventListener("click",()=>{
-      const txt=inputEn.value.trim();
-      if(!txt){ alert("请先粘贴英文内容"); return; }
-      EN=splitSentences(txt);
-      if(EN.length===0){
-        alert("没有检测到完整句子（请检查英文句尾是否有 . ? !）");
-        return;
+  async function ensureZHAndIPA(index){
+    var text = EN[index];
+    if(!text) return;
+    var needZh = autoZhChk.checked && !cacheZH[text];
+    var needIpa = autoIpaChk.checked && !cacheIPA[text];
+    if(!needZh && !needIpa) return;
+    if(!needAPI()) return;
+
+    statusEl.textContent = "正在为当前句生成 "+(needZh?"中文 ":"")+(needIpa?"音标":"")+" …";
+    try{
+      if(needZh){
+        var zhPrompt = [
+          {role:"system",content:"你是英文翻译助手。只输出对应的简体中文，不要任何解释。"},
+          {role:"user",content:text}
+        ];
+        var zh = await callChat(zhPrompt);
+        cacheZH[text] = zh.trim();
       }
-      META = EN.map(()=>({zh:"",ipa:""}));
-      renderList();
-      // 默认先帮你生成第一句，方便确认效果
-      ensureZhIpa(0).catch(console.error);
+      if(needIpa){
+        var ipaPrompt = [
+          {role:"system",content:"你是音标助手。请给出输入句子的美式 IPA 音标。只输出音标，不要其它说明，不要加斜杠。"},
+          {role:"user",content:text}
+        ];
+        var ipa = await callChat(ipaPrompt);
+        cacheIPA[text] = ipa.replace(/\//g,"").trim();
+      }
+      refreshRow(index);
+      statusEl.textContent = "已更新当前句。";
+    }catch(err){
+      console.error(err);
+      statusEl.textContent = "生成失败："+err.message;
+      statusEl.classList.add("bad");
+    }
+  }
+
+  // ====== 浏览器朗读 ======
+  function clamp(v,min,max){return Math.min(max,Math.max(min,v));}
+
+  function ensureVoicesLoaded(timeout){
+    timeout = timeout || 2000;
+    return new Promise(function(resolve){
+      function ready(){
+        var voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+        return voices && voices.length>0;
+      }
+      if(ready()) return resolve(true);
+      var id = setInterval(function(){
+        if(ready()){clearInterval(id);resolve(true);}
+      },150);
+      setTimeout(function(){clearInterval(id);resolve(true);},timeout);
     });
+  }
 
-    // === 朗读 ===
-    async function speakFrom(start){
-      const eng=engine.value;
-      if(eng==="browser" && EN.length===0){
-        const text=inputEn.value.trim();
-        if(!text){ alert("请先粘贴英文内容"); return; }
-        await ensureVoicesLoaded();
-        speechSynthesis.cancel();
-        const u=new SpeechSynthesisUtterance(text);
-        u.lang="en-US"; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
-        u.onerror=e=>console.warn("浏览器朗读错误",e);
-        speechSynthesis.speak(u);
-        return;
-      }
-      if(!EN.length){
-        alert("请先点击“拆句（不立即翻译）”");
-        return;
-      }
-      if(eng==="openai" && !openaiKeyEl.value.trim()){
-        alert("OpenAI TTS 模式需要 API Key");
-        return;
-      }
+  async function speakBrowserFrom(start){
+    if(!EN.length){
+      alert("请先拆句");
+      return;
+    }
+    await ensureVoicesLoaded();
+    window.speechSynthesis.cancel();
+    isSpeaking = true;
+    for(var i=start;i<EN.length;i++){
+      if(!isSpeaking) break;
+      setActive(i);
+      var utt = new SpeechSynthesisUtterance(EN[i]);
+      utt.lang = "en-US";
+      utt.rate = clamp(parseFloat(rateRange.value)||1,0.7,1.4);
+      await new Promise(function(res){
+        utt.onend = res;
+        utt.onerror = res;
+        speechSynthesis.speak(utt);
+      });
+    }
+  }
 
-      isSpeaking=true;
-      showProgress(eng!=="browser");
+  // ====== OpenAI / APIMart TTS ======
+  async function ttsOnce(text){
+    if(cacheTTS[text]) return cacheTTS[text];
+    if(!needAPI()) throw new Error("需要 API Key");
+
+    var base = getBaseURL();
+    var res = await fetch(base+"/v1/audio/speech",{
+      method:"POST",
+      headers:getHeaders(),
+      body:JSON.stringify({
+        model:"gpt-4o-mini-tts",
+        voice:"alloy",
+        input:text,
+        format:"mp3"
+      })
+    });
+    if(!res.ok){
+      var t = await res.text();
+      throw new Error(t);
+    }
+    var buf = await res.arrayBuffer();
+    var url = URL.createObjectURL(new Blob([buf],{type:"audio/mpeg"}));
+    cacheTTS[text] = url;
+    return url;
+  }
+
+  async function speakOpenAIFrom(start){
+    if(!EN.length){
+      alert("请先拆句");
+      return;
+    }
+    isSpeaking = true;
+    for(var i=start;i<EN.length;i++){
+      if(!isSpeaking) break;
+      setActive(i);
       try{
-        if(eng==="browser") await speakBrowserFrom(start);
-        else await speakOpenAIFrom(start);
+        var url = await ttsOnce(EN[i]);
+        audio.src = url;
+        audio.playbackRate = clamp(parseFloat(rateRange.value)||1,0.7,1.4);
+        await new Promise(function(res){
+          audio.onended = res;
+          audio.onerror = res;
+          audio.play().catch(res);
+        });
       }catch(err){
-        alert("朗读出错："+(err?.message||err));
-      }finally{
-        isSpeaking=false;
-        showProgress(false);
+        console.error(err);
+        statusEl.textContent = "TTS 出错："+err.message;
+        break;
       }
     }
+  }
 
-    async function speakBrowserFrom(start){
+  // ====== 朗读按钮事件 ======
+  readFromCurrentBtn.addEventListener("click",function(){
+    if(engineSel.value === "browser"){
+      speakBrowserFrom(currentIndex);
+    }else{
+      speakOpenAIFrom(currentIndex);
+    }
+  });
+
+  readAllBrowserBtn.addEventListener("click",function(){
+    speakBrowserFrom(0);
+  });
+
+  testSpeakBtn.addEventListener("click",async function(){
+    try{
       await ensureVoicesLoaded();
-      speechSynthesis.cancel();
-      for(let i=start;i<EN.length;i++){
-        highlight(i);
-        await ensureZhIpa(i).catch(console.error);
-        const u=new SpeechSynthesisUtterance(EN[i]);
-        u.lang="en-US"; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
-        await new Promise(res=>{
-          u.onend=res; u.onerror=res;
-          speechSynthesis.speak(u);
-        });
-        if(!isSpeaking) break;
-      }
+      var u = new SpeechSynthesisUtterance("Hello from your browser text to speech.");
+      u.lang = "en-US";
+      u.rate = clamp(parseFloat(rateRange.value)||1,0.7,1.4);
+      speechSynthesis.speak(u);
+    }catch(e){
+      alert("浏览器朗读不可用："+e.message);
     }
+  });
 
-    async function speakOpenAIFrom(start){
-      const key=openaiKeyEl.value.trim();
-      for(let i=start;i<EN.length;i++){
-        highlight(i);
-        await ensureZhIpa(i).catch(console.error);
-        const url=await openaiTts(EN[i],key);
-        await play(url);
-        setBar(((i-start+1)/(EN.length-start))*100);
-        if(!isSpeaking) break;
-      }
-    }
+  stopBtn.addEventListener("click",function(){
+    isSpeaking = false;
+    if(window.speechSynthesis) speechSynthesis.cancel();
+    audio.pause();
+  });
 
-    // ⭐ APIMart / OpenAI TTS
-    async function openaiTts(text,key){
-      const speed = clamp(parseFloat(rate.value)||1.0,0.6,1.4);
-      const res=await fetch(\`\${OPENAI_BASE}/v1/audio/speech\`,{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "Authorization":\`Bearer \${key}\`
-        },
-        body:JSON.stringify({
-          model:"gpt-4o-mini-tts",
-          input:text,
-          voice:"alloy",
-          response_format:"opus",   // APIMart 文档推荐的格式
-          speed
-        })
-      });
-      if(!res.ok) throw new Error(await res.text());
-      const buf=await res.arrayBuffer();
-      return URL.createObjectURL(new Blob([buf],{type:"audio/ogg"}));
-    }
+  rateRange.addEventListener("input",function(){
+    rateVal.textContent = (parseFloat(rateRange.value)||1).toFixed(2)+"x";
+  });
+  rateVal.textContent = (parseFloat(rateRange.value)||1).toFixed(2)+"x";
 
-    function play(url){
-      return new Promise((resolve,reject)=>{
-        player.src=url;
-        player.playbackRate=clamp(parseFloat(rate.value),0.6,1.4);
-        player.onended=()=>resolve();
-        player.onerror=e=>reject(e);
-        player.play().catch(reject);
-      });
-    }
-
-    stopBtn.addEventListener("click",()=>{
-      isSpeaking=false;
-      speechSynthesis?.cancel?.();
-      player.pause();
-    });
-    function showProgress(v){
-      progressWrap.style.display=v?"block":"none";
-      if(!v) setBar(0);
-    }
-    function setBar(p){ bar.style.width=p+"%"; }
-
-    playFromCurrent.addEventListener("click",()=> speakFrom(currentIndex));
-    quickSpeak.addEventListener("click",()=>{
-      engine.value="browser";
-      speakFrom(0);
-    });
-    testSpeak.addEventListener("click", async ()=>{
-      try{
-        await ensureVoicesLoaded();
-        speechSynthesis.cancel();
-        const u=new SpeechSynthesisUtterance("Hello from your browser! Testing testing.");
-        u.lang="en-US"; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
-        speechSynthesis.speak(u);
-      }catch(e){
-        alert("测试朗读失败："+(e?.message||e));
-      }
-    });
-
-    // ==== 学习时长统计 ====
-    function todayStr(d=new Date()){
-      const y=d.getFullYear();
-      const m=String(d.getMonth()+1).padStart(2,"0");
-      const dd=String(d.getDate()).padStart(2,"0");
-      return \`\${y}-\${m}-\${dd}\`;
-    }
-    function getMonday(d){
-      const x=new Date(d);
-      const day=(x.getDay()+6)%7; // 周一=0
-      x.setHours(0,0,0,0);
-      x.setDate(x.getDate()-day);
-      return x;
-    }
-    function endOfWeek(d){
-      const m=getMonday(d);
-      const e=new Date(m);
-      e.setDate(m.getDate()+6);
-      return e;
-    }
-    function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-    function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
-    function startOfYear(d){ return new Date(d.getFullYear(),0,1); }
-    function endOfYear(d){ return new Date(d.getFullYear(),11,31); }
-
-    function loadDaily(){
-      try{
-        const raw=localStorage.getItem(LS_KEYS.DAILY);
-        if(!raw) return {};
-        const obj=JSON.parse(raw);
-        return obj && typeof obj==="object" ? obj : {};
-      }catch{ return {}; }
-    }
-    function saveDaily(map){
-      try{ localStorage.setItem(LS_KEYS.DAILY, JSON.stringify(map)); }
-      catch(e){ console.warn("保存统计失败",e); }
-    }
-
-    function fmtHMS(sec){
-      sec=Math.max(0,Math.floor(sec));
-      const h=Math.floor(sec/3600);
-      const m=Math.floor((sec%3600)/60);
-      const s=sec%60;
-      return \`\${String(h).padStart(2,"0")}:\${String(m).padStart(2,"0")}:\${String(s).padStart(2,"0")}\`;
-    }
-    function fmtHMfromSec(sec){
-      sec=Math.max(0,Math.floor(sec));
-      const h=Math.floor(sec/3600);
-      const m=Math.floor((sec%3600)/60);
-      return \`\${h}小时\${m}分钟\`;
-    }
-    function minutesStr(sec){
-      const m=Math.round(sec/60);
-      return \`\${m}分钟\`;
-    }
-
-    let daily = loadDaily();
-    let sessionSeconds = 0;
-    let tickTimer = null;
-    let visible = document.visibilityState === "visible";
-    let running = true;
-
-    function sumRange(startDate,endDate){
-      const s=new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-      const e=new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-      let cur=new Date(s);
-      let total=0;
-      while(cur<=e){
-        total += (daily[todayStr(cur)]||0);
-        cur.setDate(cur.getDate()+1);
-      }
-      return total;
-    }
-    function totalAll(){
-      return Object.values(daily).reduce((a,b)=>a+(+b||0),0);
-    }
-
-    function renderStats(){
-      const now=new Date();
-      kThis.textContent = fmtHMS(sessionSeconds);
-      kTotal.textContent = fmtHMfromSec(totalAll());
-      kDay.textContent = minutesStr(daily[todayStr(now)]||0);
-      kWeek.textContent = minutesStr(sumRange(getMonday(now), endOfWeek(now)));
-      kMonth.textContent = minutesStr(sumRange(startOfMonth(now), endOfMonth(now)));
-      kYear.textContent = minutesStr(sumRange(startOfYear(now), endOfYear(now)));
-    }
-
-    function tick(){
-      if(!visible || !running) return;
-      sessionSeconds += 1;
-      const key=todayStr(new Date());
-      daily[key]=(daily[key]||0)+1;
-    }
-
-    function setRunning(on){
-      running = on;
-      btnTimer.textContent = on ? "暂停" : "开始";
-    }
-
-    function startCounting(){
-      if(tickTimer) clearInterval(tickTimer);
-      tickTimer=setInterval(()=>{
-        tick();
-        if(sessionSeconds % 2 === 0) renderStats();
-        if(sessionSeconds % 10 === 0) saveDaily(daily);
-      },1000);
-      renderStats();
-    }
-
-    document.addEventListener("visibilitychange",()=>{
-      visible = document.visibilityState === "visible";
-    });
-    window.addEventListener("focus",()=>{ visible=true; });
-    window.addEventListener("blur",()=>{ visible=false; });
-    window.addEventListener("beforeunload",()=>{ saveDaily(daily); });
-
-    btnDetail.addEventListener("click",()=>{
-      studyCard.classList.toggle("open");
-      btnDetail.textContent = studyCard.classList.contains("open") ? "收起" : "详情";
-    });
-
-    btnTimer.addEventListener("click",()=>{
-      setRunning(!running);
-    });
-
-    setRunning(true);
-    startCounting();
-  </script>
+});
+</script>
 </body>
 </html>
