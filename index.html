@@ -2,819 +2,948 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>英文朗读 + 中英同步（OpenAI / APIMart / 浏览器）</title>
   <style>
     :root{
-      --c:#2563eb;--b:#0ea5e9;--g:#10b981;
-      --bg:#f8fafc;--txt:#0f172a;--muted:#64748b;
-      --card:#ffffff;--border:#e5e7eb;--shadow:0 2px 8px rgba(15,23,42,.05);
-      --chip-bg:#eff6ff;--chip-txt:#1d4ed8;--chip-bd:#bfdbfe;
-      --accent-soft:#eef2ff;--accent-bd:#a5b4fc;--accent-txt:#4338ca;
-      --green-soft:#ecfdf5;--green-bd:#a7f3d0;--green-txt:#065f46;
+      --c:#2563eb;
+      --b:#0ea5e9;
+      --bg:#f8fafc;
+      --txt:#0f172a;
+      --muted:#64748b;
+      --card:#ffffff;
+      --border:#e5e7eb;
+      --shadow:0 2px 6px rgba(15,23,42,.08);
+      --chip-bg:#eff6ff;
+      --chip-txt:#1d4ed8;
+      --chip-bd:#bfdbfe;
+      --danger:#b91c1c;
     }
-    .dark{
-      --bg:#020617;--txt:#e5e7eb;--muted:#9ca3af;
-      --card:#020617;--border:#1f2937;--shadow:0 2px 16px rgba(0,0,0,.6);
-      --chip-bg:#0b1120;--chip-txt:#93c5fd;--chip-bd:#1d4ed8;
-      --accent-soft:#0b1220;--accent-bd:#4f46e5;--accent-txt:#a5b4fc;
-      --green-soft:#022c22;--green-bd:#0f766e;--green-txt:#bbf7d0;
+    body.dark{
+      --bg:#020617;
+      --txt:#e5e7eb;
+      --muted:#9ca3af;
+      --card:#020617;
+      --border:#1f2937;
+      --shadow:0 2px 16px rgba(0,0,0,.45);
+      --chip-bg:#0b1120;
+      --chip-txt:#93c5fd;
+      --chip-bd:#1d4ed8;
     }
-    *{box-sizing:border-box}
+    *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
     body{
-      margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
       background:var(--bg);
       color:var(--txt);
     }
-    .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 40px}
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:20px 16px 40px;
+    }
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:16px;
+    }
     h1{
-      font-size:22px;margin:0 0 10px;
-      display:flex;align-items:center;gap:8px;
-      color:var(--c);
+      font-size:20px;
+      display:flex;
+      align-items:center;
+      gap:8px;
     }
-    h1 span.icon{font-size:24px}
-    small{color:var(--muted)}
-    .topbar{
-      display:flex;justify-content:space-between;align-items:center;
-      margin-bottom:10px;gap:10px;flex-wrap:wrap;
+    h1 span.icon{
+      font-size:22px;
     }
-    .btn{
-      border:none;border-radius:999px;
-      background:var(--c);color:#fff;
-      padding:6px 12px;font-size:13px;cursor:pointer;
-      display:inline-flex;align-items:center;gap:4px;
-    }
-    .btn.outline{
-      background:transparent;color:var(--txt);
-      border:1px solid var(--border);
-    }
-    .btn.sm{padding:4px 10px;font-size:12px}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .card{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:18px;
-      padding:14px 16px;
-      margin-top:10px;
-      box-shadow:var(--shadow);
-    }
-    .grid-4{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
-      gap:10px;
-    }
-    @media(max-width:800px){
-      .grid-4{grid-template-columns:repeat(2,minmax(0,1fr));}
-    }
-    .stat-card{
-      border-radius:14px;
-      border:1px solid var(--border);
-      padding:8px 10px;
-      font-size:12px;
-      background:var(--card);
-    }
-    .stat-label{color:var(--muted);margin-bottom:4px}
-    .stat-value{font-weight:700;font-size:14px}
-    .stat-main{
-      display:flex;align-items:center;justify-content:space-between;gap:8px;
-      margin-top:6px;
-    }
-    input,textarea,select{
-      width:100%;font-size:14px;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid #cbd5e1;
-      background:transparent;
-      color:inherit;
-    }
-    textarea{min-height:140px;resize:vertical}
-    label{font-size:13px;font-weight:600;margin-bottom:4px;display:inline-block}
-    .row{display:grid;gap:10px}
-    .row-2{grid-template-columns:1.2fr .8fr}
-    @media(max-width:900px){.row-2{grid-template-columns:1fr}}
-    .flex{display:flex;align-items:center;gap:8px}
-    .flex-between{display:flex;align-items:center;justify-content:space-between;gap:8px}
     .pill{
-      display:inline-flex;align-items:center;gap:4px;
-      padding:3px 9px;border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:4px 10px;
+      border-radius:999px;
       border:1px solid var(--chip-bd);
-      background:var(--chip-bg);color:var(--chip-txt);
+      background:var(--chip-bg);
+      color:var(--chip-txt);
       font-size:11px;
     }
-    .slider{width:220px}
-    .cols-wrap{
-      display:grid;grid-template-columns:1fr 1fr;gap:12px;
-      max-height:60vh;overflow:auto;
-    }
-    @media(max-width:900px){
-      .cols-wrap{grid-template-columns:1fr}
-    }
-    .sent-row{
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid transparent;
+    .btn{
+      border-radius:999px;
+      border:1px solid var(--border);
+      padding:6px 10px;
+      font-size:13px;
+      background:var(--card);
+      color:var(--txt);
       cursor:pointer;
-      transition:.15s;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
     }
-    .sent-row:hover{
-      border-color:#cbd5e1;
-      background:rgba(148,163,184,0.05);
+    .btn.primary{
+      background:var(--c);
+      color:#fff;
+      border-color:var(--c);
     }
-    .sent-row.active-en{
-      background:var(--accent-soft);
-      border-color:var(--accent-bd);
-      color:var(--accent-txt);
+    .btn.danger{
+      border-color:var(--danger);
+      color:var(--danger);
     }
-    .sent-row.active-zh{
-      background:var(--green-soft);
-      border-color:var(--green-bd);
-      color:var(--green-txt);
+    .btn:disabled{
+      opacity:.55;
+      cursor:not-allowed;
     }
-    .ipa{font-size:12px;color:var(--muted);margin-top:3px}
-    .status{font-size:12px;color:#0f172a;margin-top:6px}
-    .status.error{color:#b91c1c}
-    .progress{height:6px;border-radius:999px;background:#e5e7eb;overflow:hidden;margin-top:6px}
-    .bar{height:100%;width:0;background:var(--b);transition:width .15s}
-    .note{font-size:12px;color:var(--muted);margin-top:4px}
+    .btn.sm{
+      padding:4px 8px;
+      font-size:12px;
+    }
+    .card{
+      background:var(--card);
+      border-radius:18px;
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
+      padding:14px 16px;
+      margin-bottom:14px;
+    }
+    label{
+      font-size:13px;
+      font-weight:600;
+    }
+    input[type="text"],
+    input[type="password"],
+    textarea,
+    select{
+      width:100%;
+      border-radius:10px;
+      border:1px solid var(--border);
+      padding:8px 10px;
+      margin-top:6px;
+      font-size:13px;
+      background:transparent;
+      color:var(--txt);
+    }
+    textarea{min-height:140px;resize:vertical}
+    .subtext{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:4px;
+    }
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .row > *{flex:1 1 0}
+    .row-tight{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .timer-card{
+      padding:10px 14px;
+    }
+    .timer-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:6px;
+    }
+    .timer-title{
+      font-size:13px;
+      font-weight:700;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .timer-main{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .timer-kpi{
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid var(--chip-bd);
+      background:var(--chip-bg);
+      color:var(--chip-txt);
+      font-size:11px;
+      display:inline-flex;
+      align-items:baseline;
+      gap:6px;
+    }
+    .timer-kpi .num{font-weight:800}
+    .timer-detail{
+      margin-top:8px;
+      display:none;
+      font-size:12px;
+    }
+    .timer-detail.open{display:block}
+    .timer-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+      gap:8px;
+    }
+    .timer-box{
+      border-radius:12px;
+      border:1px solid var(--border);
+      padding:6px 8px;
+    }
+    .timer-label{
+      font-size:11px;
+      color:var(--muted);
+      margin-bottom:2px;
+    }
+    .switch{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      font-size:12px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .switch input{accent-color:var(--c)}
+    .range-row{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-size:13px;
+      margin-top:6px;
+    }
+    input[type="range"]{flex:1}
+    .badge{
+      font-size:11px;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+    }
+    .controls-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:8px;
+    }
+    .controls-row .btn{flex:0 0 auto}
+    .status{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .status.error{color:var(--danger)}
+    .two-cols{
+      display:grid;
+      grid-template-columns:2fr 2fr;
+      gap:0;
+      border-radius:18px;
+      overflow:hidden;
+      border:1px solid var(--border);
+      margin-top:4px;
+    }
+    .col-left,.col-right{
+      max-height:360px;
+      overflow:auto;
+    }
+    .sentence-row{
+      display:flex;
+      flex-direction:column;
+      padding:8px 10px;
+      border-bottom:1px solid var(--border);
+      cursor:pointer;
+      transition:background .15s;
+      font-size:14px;
+    }
+    .sentence-row:last-child{border-bottom:none}
+    .sentence-row:hover{
+      background:rgba(37,99,235,.04);
+    }
+    body.dark .sentence-row:hover{
+      background:rgba(148,163,184,.15);
+    }
+    .sentence-row.active{
+      background:rgba(37,99,235,.12);
+    }
+    .sentence-row.zh.active{
+      background:rgba(16,185,129,.14);
+    }
+    .ipa{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:2px;
+    }
+    .zh-text{
+      font-size:14px;
+    }
+    .small-note{
+      font-size:11px;
+      color:var(--muted);
+      margin-top:2px;
+    }
+    .top-badges{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .provider-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:8px;
+      align-items:center;
+    }
+    .provider-row select{
+      width:auto;
+      min-width:150px;
+    }
+    @media(max-width:720px){
+      .two-cols{grid-template-columns:1fr}
+      .col-left,.col-right{max-height:unset}
+    }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="topbar">
-    <div class="flex" style="gap:6px">
-      <span class="icon">🎧</span>
-      <h1 style="margin:0">英文朗读 + 中英同步（OpenAI / APIMart / 浏览器）</h1>
-    </div>
-    <div class="flex">
-      <button id="themeBtn" class="btn outline sm">🌙 深色</button>
-    </div>
-  </div>
-
-  <!-- 学习时长统计 -->
-  <div class="card">
-    <div class="flex-between">
-      <div class="flex" style="gap:6px">
-        <strong>学习时长</strong>
-        <span class="pill">
-          本次 <span id="statThis" style="font-weight:700">00:00:00</span>
-        </span>
-        <span class="pill">
-          总计 <span id="statTotal" style="font-weight:700">0小时0分钟</span>
-        </span>
-      </div>
-      <div class="flex" style="gap:6px">
-        <button id="timerToggle" class="btn outline sm">暂停</button>
-        <button id="statDetailBtn" class="btn outline sm">详情</button>
-      </div>
-    </div>
-    <div id="statDetail" style="margin-top:10px;display:none">
-      <div class="grid-4">
-        <div class="stat-card">
-          <div class="stat-label">今天</div>
-          <div class="stat-value" id="statDay">0分钟</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">本周</div>
-          <div class="stat-value" id="statWeek">0分钟</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">本月</div>
-          <div class="stat-value" id="statMonth">0分钟</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">今年</div>
-          <div class="stat-value" id="statYear">0分钟</div>
-        </div>
-      </div>
-      <div class="note" style="margin-top:6px">
-        仅在页面前台且计时状态为「开始」时累积时长；按自然日 / 周 / 月 / 年统计，数据保存在浏览器 localStorage。
-      </div>
-    </div>
-  </div>
-
-  <!-- API Key & 服务商 -->
-  <div class="card">
-    <div class="row" style="grid-template-columns:2fr 1fr">
+  <div class="wrap">
+    <header>
       <div>
-        <label>API Key（用于翻译 / 音标 / OpenAI TTS）</label>
-        <input id="apiKey" type="password" placeholder="sk-...（OpenAI 或 APIMart 的 Key，保存在本地浏览器）" />
+        <h1>
+          <span class="icon">🎧</span>
+          <span>英文朗读 + 中英同步（OpenAI / APIMart / 浏览器）</span>
+        </h1>
+        <div class="top-badges">
+          <span class="pill">支持句对齐朗读、懒加载翻译和音标，尽量节省 API 额度。</span>
+        </div>
       </div>
-      <div>
-        <label>服务商</label>
+      <div class="row-tight">
+        <button id="themeBtn" class="btn sm" title="切换浅色 / 深色">🌙 深色</button>
+      </div>
+    </header>
+
+    <!-- 学习时长 -->
+    <div class="card timer-card">
+      <div class="timer-top">
+        <div class="timer-title">
+          ⏱ 学习时长
+        </div>
+        <div class="row-tight">
+          <button id="timerToggle" class="btn sm primary">暂停</button>
+          <button id="timerDetailBtn" class="btn sm">详情</button>
+        </div>
+      </div>
+      <div class="timer-main">
+        <div class="timer-kpi">
+          <span>本次</span>
+          <span id="kSession" class="num">00:00:00</span>
+        </div>
+        <div class="timer-kpi">
+          <span>总计</span>
+          <span id="kTotal" class="num">0小时0分钟</span>
+        </div>
+        <span id="timerHint" class="small-note">
+          仅在页面前台且计时为“开始”时累积；数据保存在浏览器 localStorage。
+        </span>
+      </div>
+      <div id="timerDetail" class="timer-detail">
+        <div class="timer-grid" style="margin-top:6px">
+          <div class="timer-box">
+            <div class="timer-label">今天</div>
+            <div id="kDay">0分钟</div>
+          </div>
+          <div class="timer-box">
+            <div class="timer-label">本周（周一-周日）</div>
+            <div id="kWeek">0分钟</div>
+          </div>
+          <div class="timer-box">
+            <div class="timer-label">本月</div>
+            <div id="kMonth">0分钟</div>
+          </div>
+          <div class="timer-box">
+            <div class="timer-label">今年</div>
+            <div id="kYear">0分钟</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Key & 服务商 -->
+    <div class="card">
+      <label for="apiKey">API Key（用于翻译 / 音标 / OpenAI & APIMart TTS）</label>
+      <input id="apiKey" type="password" placeholder="sk-...（仅本地保存，可填 OpenAI 或 APIMart 的 Key）" />
+      <div class="subtext">
+        说明：只在需要翻译、音标或使用 OpenAI / APIMart 语音 TTS 时才会用到。
+      </div>
+      <div class="provider-row">
+        <span class="badge">服务商：</span>
         <select id="provider">
           <option value="apimart">APIMart 代理（推荐省钱）</option>
           <option value="openai">OpenAI 官方</option>
         </select>
+        <button id="saveApi" class="btn sm">保存到本地</button>
       </div>
+      <div id="saveHint" class="subtext" style="display:none;margin-top:4px">已保存到 localStorage ✓</div>
     </div>
-    <div class="flex-between" style="margin-top:8px">
-      <small>说明：只在需要翻译、音标或使用 OpenAI / APIMart 语音时才会用到 Key，浏览器朗读完全免费。</small>
-      <button id="saveKeyBtn" class="btn outline sm">保存到本地</button>
-    </div>
-  </div>
 
-  <!-- 文本输入 -->
-  <div class="card">
-    <label>英文内容（粘贴或上传 .docx）</label>
-    <textarea id="inputEn" placeholder="Paste your English text here..."></textarea>
-    <div class="flex-between" style="margin-top:6px;flex-wrap:wrap">
-      <div class="flex">
-        <input id="docx" type="file" accept=".docx" />
-        <span id="charCount" class="pill" style="margin-left:6px">0 chars</span>
+    <!-- 输入 -->
+    <div class="card">
+      <label for="inputEn">英文内容（粘贴或上传 .docx）</label>
+      <textarea id="inputEn" placeholder="Paste your English text here, or upload a .docx file…"></textarea>
+      <div class="row" style="margin-top:8px;align-items:center">
+        <div class="row-tight">
+          <input type="file" id="docx" accept=".docx" />
+          <span id="charCount" class="badge">0 chars</span>
+        </div>
+        <div class="row-tight">
+          <label class="switch">
+            <input id="autoTranslate" type="checkbox" checked />
+            <span>自动翻译中文（懒加载，每句只翻一次）</span>
+          </label>
+          <label class="switch">
+            <input id="autoIpa" type="checkbox" checked />
+            <span>显示美式音标（懒加载，每句只生成一次）</span>
+          </label>
+        </div>
       </div>
-      <div class="flex" style="gap:14px">
-        <label class="flex" style="gap:4px;font-weight:400">
-          <input id="autoZh" type="checkbox" /> 自动翻译中文（懒加载，每句只翻一次）
-        </label>
-        <label class="flex" style="gap:4px;font-weight:400">
-          <input id="autoIpa" type="checkbox" /> 显示美式音标（懒加载，每句只生成一次）
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <!-- 播放控制 -->
-  <div class="card">
-    <div class="flex-between">
-      <div class="flex" style="gap:10px;flex-wrap:wrap">
-        <div class="flex">
-          <label style="margin-right:6px">朗读引擎：</label>
-          <select id="engine" style="width:auto">
-            <option value="browser">浏览器（免费）</option>
+      <div class="row" style="margin-top:6px">
+        <div class="row-tight">
+          <span>朗读引擎：</span>
+          <select id="engine" style="width:auto;min-width:210px">
             <option value="api">OpenAI / APIMart TTS（逐句懒加载 + 缓存，省钱）</option>
+            <option value="browser">浏览器 TTS（免费，不占额度）</option>
           </select>
+          <span>声音：</span>
+          <select id="voiceGender" style="width:auto;min-width:120px">
+            <option value="female">女声</option>
+            <option value="male">男声</option>
+          </select>
+          <label class="switch">
+            <input id="loopCurrent" type="checkbox" />
+            <span>循环当前句</span>
+          </label>
         </div>
-        <div class="flex">
-          <label style="margin-right:6px">速度：<span id="rateVal">1.00x</span></label>
-          <input id="rate" class="slider" type="range" min="0.6" max="1.4" step="0.05" value="1.0" />
+        <div class="range-row">
+          <span>速度：</span>
+          <span id="rateVal">1.00x</span>
+          <input id="rate" type="range" min="0.7" max="1.3" step="0.05" value="1.0" />
         </div>
       </div>
+
+      <div class="controls-row">
+        <button id="splitBtn" class="btn primary">拆句（不立即翻译）</button>
+        <button id="playFromCurrent" class="btn">从当前句开始朗读</button>
+        <button id="playBrowserWhole" class="btn">直接朗读整段（浏览器）</button>
+        <button id="testHello" class="btn">测试朗读（Hello）</button>
+        <button id="stopBtn" class="btn">停止朗读</button>
+      </div>
+      <div class="controls-row">
+        <span class="small-note">提示：句子越短，对齐和 TTS 效果越好，建议一行一句。</span>
+      </div>
+      <div id="status" class="status"></div>
     </div>
-    <div class="flex" style="margin-top:10px;flex-wrap:wrap;gap:8px">
-      <button id="splitBtn" class="btn">拆句（不立即翻译）</button>
-      <button id="playFromCurrent" class="btn">从当前句开始朗读</button>
-      <button id="quickBrowser" class="btn outline">直接朗读整段（浏览器）</button>
-      <button id="testHello" class="btn outline">测试朗读（Hello）</button>
-      <button id="stopBtn" class="btn outline">停止朗读</button>
-    </div>
-    <div id="status" class="status"></div>
-    <div class="progress" id="progress" style="display:none">
-      <div class="bar" id="bar"></div>
+
+    <!-- 显示区 -->
+    <div class="card">
+      <div class="two-cols">
+        <div id="enCol" class="col-left"></div>
+        <div id="zhCol" class="col-right"></div>
+      </div>
+      <div id="diag" class="status" style="margin-top:6px"></div>
     </div>
   </div>
 
-  <!-- 中英对照 -->
-  <div class="card">
-    <div class="cols-wrap">
-      <div id="enCol"></div>
-      <div id="zhCol"></div>
-    </div>
-  </div>
-</div>
+  <audio id="player"></audio>
+  <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
+  <script>
+    "use strict";
+    const $ = id => document.getElementById(id);
 
-<audio id="player"></audio>
-<script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
-<script>
-  const $ = id => document.getElementById(id);
-
-  const apiKeyEl = $("apiKey");
-  const providerEl = $("provider");
-  const saveKeyBtn = $("saveKeyBtn");
-
-  const inputEn = $("inputEn");
-  const docx = $("docx");
-  const charCount = $("charCount");
-
-  const autoZh = $("autoZh");
-  const autoIpa = $("autoIpa");
-
-  const engine = $("engine");
-  const rate = $("rate");
-  const rateVal = $("rateVal");
-
-  const splitBtn = $("splitBtn");
-  const playFromCurrent = $("playFromCurrent");
-  const quickBrowser = $("quickBrowser");
-  const testHello = $("testHello");
-  const stopBtn = $("stopBtn");
-
-  const statusEl = $("status");
-  const progress = $("progress");
-  const bar = $("bar");
-  const player = $("player");
-
-  const enCol = $("enCol");
-  const zhCol = $("zhCol");
-
-  const themeBtn = $("themeBtn");
-
-  // ---- 学习时长元素 ----
-  const statThis = $("statThis");
-  const statTotal = $("statTotal");
-  const statDay = $("statDay");
-  const statWeek = $("statWeek");
-  const statMonth = $("statMonth");
-  const statYear = $("statYear");
-  const statDetailBtn = $("statDetailBtn");
-  const statDetail = $("statDetail");
-  const timerToggle = $("timerToggle");
-
-  const LS_KEYS = {
-    KEY: "tts-app:key",
-    PROVIDER: "tts-app:provider",
-    THEME: "tts-app:theme",
-    DAILY: "tts-app:dailySeconds"
-  };
-
-  // ==== 主题 ====
-  function applyTheme(theme){
-    document.body.classList.toggle("dark", theme==="dark");
-    themeBtn.textContent = theme==="dark" ? "☀️ 浅色" : "🌙 深色";
-    localStorage.setItem(LS_KEYS.THEME, theme);
-  }
-  (function initTheme(){
-    const saved = localStorage.getItem(LS_KEYS.THEME);
-    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    applyTheme(saved || (prefersDark ? "dark" : "light"));
-  })();
-  themeBtn.onclick = () => {
-    const cur = document.body.classList.contains("dark") ? "dark" : "light";
-    applyTheme(cur==="dark" ? "light" : "dark");
-  };
-
-  // ==== API Key / provider ====
-  (function initKey(){
-    try{
-      apiKeyEl.value = localStorage.getItem(LS_KEYS.KEY) || "";
-      providerEl.value = localStorage.getItem(LS_KEYS.PROVIDER) || "apimart";
-    }catch(e){}
-  })();
-
-  saveKeyBtn.onclick = () => {
-    try{
-      const k = apiKeyEl.value.trim().replace(/^["']|["']$/g,"");
-      const p = providerEl.value;
-      localStorage.setItem(LS_KEYS.KEY, k);
-      localStorage.setItem(LS_KEYS.PROVIDER, p);
-      apiKeyEl.value = k;
-      status("已保存 API Key & 服务商到本地 ✓");
-    }catch(e){
-      status("保存失败（浏览器禁止本地存储）", true);
+    // ==== 主题 ====
+    const THEME_KEY = "reader:theme";
+    function applyTheme(theme){
+      document.body.classList.toggle("dark", theme === "dark");
+      $("themeBtn").textContent = theme === "dark" ? "☀️ 浅色" : "🌙 深色";
+      try{ localStorage.setItem(THEME_KEY, theme); }catch(e){}
     }
-  };
+    (function initTheme(){
+      let saved;
+      try{ saved = localStorage.getItem(THEME_KEY); }catch(e){}
+      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      applyTheme(saved || (prefersDark ? "dark" : "light"));
+    })();
+    $("themeBtn").addEventListener("click",()=>{
+      const now = document.body.classList.contains("dark") ? "dark" : "light";
+      applyTheme(now === "dark" ? "light" : "dark");
+    });
 
-  function getBaseUrl(){
-    return providerEl.value === "apimart"
-      ? "https://api.apimart.cn"
-      : "https://api.openai.com";
-  }
-  function getHeaders(){
-    const key = apiKeyEl.value.trim();
-    if(!key) throw new Error("请先填写 API Key");
-    return {
-      "Content-Type":"application/json",
-      "Authorization":"Bearer " + key
-    };
-  }
+    // ==== 学习计时 ====
+    const TIME_KEY = "reader:secsByDay";
+    let daily = {};
+    try{
+      const raw = localStorage.getItem(TIME_KEY);
+      daily = raw ? JSON.parse(raw) : {};
+    }catch(e){ daily = {}; }
 
-  // ==== 计时器 & 统计 ====
-  function todayStr(d=new Date()){
-    const y=d.getFullYear();
-    const m=String(d.getMonth()+1).padStart(2,"0");
-    const dd=String(d.getDate()).padStart(2,"0");
-    return `${y}-${m}-${dd}`;
-  }
-  function getMonday(d){
-    const x=new Date(d);
-    const day=(x.getDay()+6)%7;
-    x.setHours(0,0,0,0);
-    x.setDate(x.getDate()-day);
-    return x;
-  }
-  function endOfWeek(d){
-    const s=getMonday(d);
-    const e=new Date(s);
-    e.setDate(s.getDate()+6);
-    return e;
-  }
-  function startOfMonth(d){return new Date(d.getFullYear(),d.getMonth(),1);}
-  function endOfMonth(d){return new Date(d.getFullYear(),d.getMonth()+1,0);}
-  function startOfYear(d){return new Date(d.getFullYear(),0,1);}
-  function endOfYear(d){return new Date(d.getFullYear(),11,31);}
-  function loadDaily(){
-    try{
-      const raw = localStorage.getItem(LS_KEYS.DAILY);
-      if(!raw) return {};
-      const obj = JSON.parse(raw);
-      return obj && typeof obj==="object" ? obj : {};
-    }catch(_){return {};}
-  }
-  function saveDaily(map){
-    try{
-      localStorage.setItem(LS_KEYS.DAILY, JSON.stringify(map));
-    }catch(_){}
-  }
-  function sumRange(map,start,end){
-    const s = new Date(start.getFullYear(),start.getMonth(),start.getDate());
-    const e = new Date(end.getFullYear(),end.getMonth(),end.getDate());
-    let cur = new Date(s);
-    let total = 0;
-    while(cur<=e){
-      total += map[todayStr(cur)] || 0;
-      cur.setDate(cur.getDate()+1);
+    let sessionSeconds = 0;
+    let running = true;
+    let visible = document.visibilityState === "visible";
+
+    function todayStr(d=new Date()){
+      const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
+      return `${y}-${m}-${dd}`;
     }
-    return total;
-  }
-  function fmtHMS(sec){
-    sec = Math.max(0,Math.floor(sec));
-    const h=(sec/3600)|0;
-    const m=((sec%3600)/60)|0;
-    const s=sec%60;
-    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-  }
-  function fmtHM(sec){
-    sec = Math.max(0,Math.floor(sec));
-    const h=(sec/3600)|0;
-    const m=((sec%3600)/60)|0;
-    return `${h}小时${m}分钟`;
-  }
-  function minutesStr(sec){
-    return `${Math.round(sec/60)}分钟`;
-  }
+    function cloneDate(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+    function startOfWeek(d){
+      const x=cloneDate(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); return x;
+    }
+    function endOfWeek(d){ const x=startOfWeek(d); x.setDate(x.getDate()+6); return x; }
+    function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+    function endOfMonth(d){ return new Date(d.getFullYear(), d.getMonth()+1, 0); }
+    function startOfYear(d){ return new Date(d.getFullYear(),0,1); }
+    function endOfYear(d){ return new Date(d.getFullYear(),11,31); }
 
-  let daily = loadDaily();
-  let sessionSeconds = 0;
-  let tickTimer = null;
-  let visible = document.visibilityState === "visible";
-  let running = true; // 是否在计时
+    function sumRange(start,end){
+      const s=cloneDate(start), e=cloneDate(end);
+      let cur = new Date(s), total = 0;
+      while(cur <= e){
+        const key = todayStr(cur);
+        total += daily[key] || 0;
+        cur.setDate(cur.getDate()+1);
+      }
+      return total;
+    }
+    function totalAll(){
+      return Object.values(daily).reduce((a,b)=>a + (b||0),0);
+    }
+    function fmtHMS(sec){
+      sec = Math.max(0, Math.floor(sec));
+      const h=Math.floor(sec/3600);
+      const m=Math.floor((sec%3600)/60);
+      const s=sec%60;
+      return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    }
+    function fmtHM(sec){
+      sec = Math.max(0, Math.floor(sec));
+      const h=Math.floor(sec/3600);
+      const m=Math.floor((sec%3600)/60);
+      return `${h}小时${m}分钟`;
+    }
+    function minutesStr(sec){
+      const m=Math.round(sec/60);
+      return `${m}分钟`;
+    }
+    function renderTimer(){
+      const now = new Date();
+      $("kSession").textContent = fmtHMS(sessionSeconds);
+      $("kTotal").textContent = fmtHM(totalAll());
+      $("kDay").textContent = minutesStr(daily[todayStr(now)] || 0);
+      $("kWeek").textContent = minutesStr(sumRange(startOfWeek(now), endOfWeek(now)));
+      $("kMonth").textContent = minutesStr(sumRange(startOfMonth(now), endOfMonth(now)));
+      $("kYear").textContent = minutesStr(sumRange(startOfYear(now), endOfYear(now)));
+      $("timerToggle").textContent = running ? "暂停" : "开始";
+      $("timerHint").textContent = running
+        ? "计时进行中：仅在页面前台时累积；数据保存在浏览器 localStorage。"
+        : "计时已暂停：点击“开始”恢复计时。";
+    }
+    function tick(){
+      if(!running || !visible) return;
+      sessionSeconds += 1;
+      const key = todayStr(new Date());
+      daily[key] = (daily[key] || 0) + 1;
+      if(sessionSeconds % 5 === 0){
+        try{ localStorage.setItem(TIME_KEY, JSON.stringify(daily)); }catch(e){}
+      }
+      renderTimer();
+    }
+    setInterval(tick,1000);
+    renderTimer();
 
-  function renderStats(){
-    const now = new Date();
-    statThis.textContent = fmtHMS(sessionSeconds);
-    const total = Object.values(daily).reduce((a,b)=>a+(+b||0),0);
-    statTotal.textContent = fmtHM(total);
-    statDay.textContent = minutesStr(daily[todayStr(now)]||0);
-    statWeek.textContent = minutesStr(sumRange(daily,getMonday(now),endOfWeek(now)));
-    statMonth.textContent = minutesStr(sumRange(daily,startOfMonth(now),endOfMonth(now)));
-    statYear.textContent = minutesStr(sumRange(daily,startOfYear(now),endOfYear(now)));
-  }
+    $("timerToggle").addEventListener("click",()=>{
+      running = !running;
+      renderTimer();
+    });
+    $("timerDetailBtn").addEventListener("click",()=>{
+      const box = $("timerDetail");
+      const open = !box.classList.contains("open");
+      box.classList.toggle("open", open);
+      $("timerDetailBtn").textContent = open ? "收起" : "详情";
+    });
+    document.addEventListener("visibilitychange",()=>{
+      visible = document.visibilityState === "visible";
+    });
 
-  function tick(){
-    if(!visible || !running) return;
-    sessionSeconds += 1;
-    const k = todayStr(new Date());
-    daily[k] = (daily[k]||0) + 1;
-    if(sessionSeconds % 2 === 0) renderStats();
-    if(sessionSeconds % 10 === 0) saveDaily(daily);
-  }
+    // ==== API Key & Provider ====
+    const API_KEY_STORAGE = "reader:apiKey";
+    const PROVIDER_STORAGE = "reader:provider";
 
-  function startTimerLoop(){
-    if(tickTimer) clearInterval(tickTimer);
-    tickTimer = setInterval(tick,1000);
-  }
+    const apiKeyInput = $("apiKey");
+    const providerSelect = $("provider");
+    (function loadApi(){
+      try{
+        const k = localStorage.getItem(API_KEY_STORAGE);
+        if(k) apiKeyInput.value = k;
+        const p = localStorage.getItem(PROVIDER_STORAGE);
+        if(p) providerSelect.value = p;
+      }catch(e){}
+    })();
+    $("saveApi").addEventListener("click",()=>{
+      try{
+        const key = apiKeyInput.value.trim().replace(/^["']|["']$/g,"");
+        localStorage.setItem(API_KEY_STORAGE,key);
+        localStorage.setItem(PROVIDER_STORAGE, providerSelect.value);
+        apiKeyInput.value = key;
+        const hint = $("saveHint");
+        hint.style.display = "block";
+        hint.textContent = "已保存到 localStorage ✓";
+        setTimeout(()=>{hint.style.display="none";},1600);
+      }catch(e){
+        alert("无法保存到 localStorage，可能浏览器处于无痕或禁用存储模式。");
+      }
+    });
 
-  function setRunning(on){
-    running = on;
-    timerToggle.textContent = on ? "暂停" : "开始";
-  }
-
-  // 初始化计时器：默认开始
-  setRunning(true);
-  renderStats();
-  startTimerLoop();
-
-  document.addEventListener("visibilitychange",()=>{visible = document.visibilityState === "visible";});
-  window.addEventListener("focus",()=>{visible=true;});
-  window.addEventListener("blur",()=>{visible=false;});
-  window.addEventListener("beforeunload",()=>saveDaily(daily));
-
-  timerToggle.onclick = () => {
-    setRunning(!running);
-  };
-  statDetailBtn.onclick = () => {
-    const on = statDetail.style.display !== "none";
-    statDetail.style.display = on ? "none" : "block";
-    statDetailBtn.textContent = on ? "详情" : "收起";
-  };
-
-  // ==== 文本 / 拆句 ====
-  function updateCharCount(){
-    charCount.textContent = (inputEn.value || "").length + " chars";
-  }
-  ["input","change","keyup","paste"].forEach(ev=>{
-    inputEn.addEventListener(ev,updateCharCount);
-  });
-  updateCharCount();
-
-  docx.addEventListener("change",async e=>{
-    const f = e.target.files && e.target.files[0];
-    if(!f) return;
-    const buf = await f.arrayBuffer();
-    const {value} = await window.mammoth.extractRawText({arrayBuffer:buf});
-    inputEn.value = value.trim();
+    // ==== 工具 ====
+    const inputEn = $("inputEn");
+    const charCount = $("charCount");
+    function updateCharCount(){
+      charCount.textContent = (inputEn.value || "").length + " chars";
+    }
+    ["input","change","keyup","paste"].forEach(ev=>inputEn.addEventListener(ev,updateCharCount));
     updateCharCount();
-  });
 
-  rate.addEventListener("input",()=>{
-    rateVal.textContent = Number(rate.value).toFixed(2)+"x";
-  });
-
-  // 拆句
-  function splitSentences(txt){
-    const cleaned = (txt||"").replace(/\s+/g," ").trim();
-    if(!cleaned) return [];
-    return cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
-  }
-
-  let EN = [];
-  let currentIndex = 0;
-  let zhCache = {};   // index -> zh
-  let ipaCache = {};  // index -> ipa
-  let ttsCache = {};  // index -> objectURL
-  let speaking = false;
-
-  function renderCols(){
-    enCol.innerHTML = "";
-    zhCol.innerHTML = "";
-    EN.forEach((s,i)=>{
-      const enRow = document.createElement("div");
-      enRow.className = "sent-row" + (i===currentIndex ? " active-en" : "");
-      enRow.dataset.idx = i;
-      enRow.innerHTML = `<div>${s}</div>` + (ipaCache[i] ? `<div class="ipa">/${ipaCache[i]}/</div>`:"");
-      enRow.onclick = ()=>{setActiveIndex(i);};
-      enCol.appendChild(enRow);
-
-      const zhRow = document.createElement("div");
-      zhRow.className = "sent-row" + (i===currentIndex ? " active-zh" : "");
-      zhRow.dataset.idx = i;
-      zhRow.textContent = zhCache[i] || "";
-      zhRow.onclick = ()=>{setActiveIndex(i);};
-      zhCol.appendChild(zhRow);
+    $("rate").addEventListener("input",()=>{
+      $("rateVal").textContent = Number($("rate").value).toFixed(2) + "x";
     });
-  }
 
-  function setActiveIndex(i){
-    currentIndex = i;
-    [...enCol.children].forEach((el,idx)=>el.classList.toggle("active-en",idx===i));
-    [...zhCol.children].forEach((el,idx)=>el.classList.toggle("active-zh",idx===i));
-    const targetEn = enCol.children[i];
-    const targetZh = zhCol.children[i];
-    if(targetEn) targetEn.scrollIntoView({behavior:"smooth",block:"center"});
-    if(targetZh) targetZh.scrollIntoView({behavior:"smooth",block:"center"});
-  }
-
-  splitBtn.onclick = ()=>{
-    const txt = inputEn.value.trim();
-    if(!txt){
-      alert("请先粘贴英文内容");
-      return;
+    function setStatus(msg,isError=false){
+      const el = $("status");
+      el.textContent = msg || "";
+      el.classList.toggle("error", !!isError);
     }
-    EN = splitSentences(txt);
-    if(!EN.length){
-      alert("没有检测到完整句子（请检查 . ? !）");
-      return;
+    function setDiag(msg,isError=false){
+      const el = $("diag");
+      el.textContent = msg || "";
+      el.classList.toggle("error", !!isError);
     }
-    zhCache = {};
-    ipaCache = {};
-    ttsCache = {};
-    currentIndex = 0;
-    renderCols();
-    setActiveIndex(0);
-    status("已拆句。翻译 / 音标将在第一次点击或朗读该句时生成。");
-  };
 
-  // ==== 请求封装（懒加载翻译 / 音标 / TTS）====
-  async function callChat(model, systemPrompt, userContent){
-    const body = {
-      model,
-      messages:[
-        {role:"system",content:systemPrompt},
-        {role:"user",content:userContent}
-      ],
-      temperature:0
-    };
-    const url = getBaseUrl() + "/v1/chat/completions";
-    const headers = getHeaders();
-    const res = await fetch(url,{
-      method:"POST",
-      headers,
-      body:JSON.stringify(body)
-    });
-    if(!res.ok){
-      throw new Error(await res.text());
+    const providerBase = ()=> providerSelect.value === "apimart"
+      ? "https://api.apimart.net"
+      : "https://api.openai.com";
+
+    function getApiKeyOrWarn(){
+      const key = apiKeyInput.value.trim();
+      if(!key){
+        alert("请先填写 API Key（可用 OpenAI 或 APIMart 的 Key），再重试。");
+        return null;
+      }
+      return key;
     }
-    const data = await res.json();
-    return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || "";
-  }
 
-  async function ensureZh(i){
-    if(zhCache[i] || !autoZh.checked) return;
-    const s = EN[i];
-    if(!s) return;
-    const out = await callChat(
-      "gpt-4o-mini",
-      "Translate this English sentence into Simplified Chinese. Output Chinese only.",
-      s
-    );
-    zhCache[i] = out.trim();
-    renderCols();
-  }
+    function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-  async function ensureIpa(i){
-    if(ipaCache[i] || !autoIpa.checked) return;
-    const s = EN[i];
-    if(!s) return;
-    const out = await callChat(
-      "gpt-4o-mini",
-      "You are a phonetics assistant. Output American English IPA transcription of the given sentence. Use pure IPA symbols without slashes, brackets or extra text.",
-      s
-    );
-    ipaCache[i] = out.trim().replace(/^\/|\/$/g,"");
-    renderCols();
-  }
+    // ==== 拆句 ====
+    let EN = [];
+    let meta = []; // 每句的 {zh, ipa, loading, error}
+    let currentIndex = 0;
 
-  async function ensureTtsUrl(i){
-    if(ttsCache[i]) return ttsCache[i];
-    const s = EN[i];
-    if(!s) return null;
-    const key = apiKeyEl.value.trim();
-    if(!key){
-      alert("使用 OpenAI / APIMart TTS 前，请先填写 API Key");
-      throw new Error("no key");
+    const enCol = $("enCol");
+    const zhCol = $("zhCol");
+
+    function splitLines(txt){
+      const raw = (txt || "").replace(/\r\n/g,"\n");
+      return raw.split("\n").map(s=>s.trim()).filter(Boolean);
     }
-    const url = getBaseUrl() + "/v1/audio/speech";
-    const headers = getHeaders();
-    const body = {
-      model:"gpt-4o-mini-tts",
-      voice:"alloy",
-      input:s,
-      format:"mp3"
-    };
-    const res = await fetch(url,{
-      method:"POST",
-      headers,
-      body:JSON.stringify(body)
-    });
-    if(!res.ok){
-      throw new Error(await res.text());
-    }
-    const buf = await res.arrayBuffer();
-    const blobUrl = URL.createObjectURL(new Blob([buf],{type:"audio/mpeg"}));
-    ttsCache[i] = blobUrl;
-    return blobUrl;
-  }
 
-  // 状态条
-  function status(msg,isError=false){
-    statusEl.textContent = msg || "";
-    statusEl.className = "status"+(isError?" error":"");
-  }
-  function setProgress(p){
-    bar.style.width = p+"%";
-  }
-  function showProgress(v){
-    progress.style.display = v ? "block" : "none";
-    if(!v) setProgress(0);
-  }
+    function renderSentences(){
+      enCol.innerHTML = "";
+      zhCol.innerHTML = "";
+      EN.forEach((s,i)=>{
+        const d = document.createElement("div");
+        d.className = "sentence-row en";
+        if(i === currentIndex) d.classList.add("active");
+        d.dataset.idx = i;
+        d.innerHTML = `
+          <div>${s}</div>
+          <div class="ipa">${meta[i].ipa || ""}</div>
+        `;
+        d.addEventListener("click",()=>onSentenceClick(i));
+        enCol.appendChild(d);
 
-  // ==== 朗读逻辑 ====
-  function clamp(v,min,max){return Math.min(max,Math.max(min,v));}
-  function ensureVoicesLoaded(timeout=2000){
-    return new Promise(resolve=>{
-      const have = ()=> speechSynthesis.getVoices().length>0;
-      if(have()) return resolve(true);
-      const id = setInterval(()=>{
-        if(have()){clearInterval(id);resolve(true);}
-      },150);
-      setTimeout(()=>{clearInterval(id);resolve(true);},timeout);
-    });
-  }
-
-  async function speakBrowserFrom(start){
-    await ensureVoicesLoaded();
-    speechSynthesis.cancel();
-    for(let i=start;i<EN.length;i++){
-      if(!speaking) break;
-      setActiveIndex(i);
-      const u = new SpeechSynthesisUtterance(EN[i]);
-      u.lang = "en-US";
-      u.rate = clamp(parseFloat(rate.value)||1,0.6,1.4);
-      await new Promise(res=>{
-        u.onend = res;
-        u.onerror = res;
-        speechSynthesis.speak(u);
+        const z = document.createElement("div");
+        z.className = "sentence-row zh";
+        if(i === currentIndex) z.classList.add("active");
+        z.dataset.idx = i;
+        z.innerHTML = `<div class="zh-text">${meta[i].zh || ""}</div>`;
+        z.addEventListener("click",()=>onSentenceClick(i));
+        zhCol.appendChild(z);
       });
     }
-  }
 
-  async function speakApiFrom(start){
-    for(let i=start;i<EN.length;i++){
-      if(!speaking) break;
-      setActiveIndex(i);
+    function highlight(i){
+      currentIndex = i;
+      [...enCol.children].forEach((el,idx)=>el.classList.toggle("active",idx===i));
+      [...zhCol.children].forEach((el,idx)=>el.classList.toggle("active",idx===i));
+      const left = enCol.children[i];
+      const right = zhCol.children[i];
+      left && left.scrollIntoView({behavior:"smooth",block:"center"});
+      right && right.scrollIntoView({behavior:"smooth",block:"center"});
+    }
+
+    // ==== 懒加载翻译 + 音标 ====
+    async function ensureSentenceData(i){
+      const needZh = $("autoTranslate").checked && !meta[i].zh && !meta[i].loading;
+      const needIpa = $("autoIpa").checked && !meta[i].ipa && !meta[i].loading;
+      if(!needZh && !needIpa) return;
+      const key = getApiKeyOrWarn();
+      if(!key) return;
+      meta[i].loading = true;
+      setStatus("正在生成该句的翻译与音标（只会生成一次）…");
       try{
-        await Promise.all([ensureZh(i),ensureIpa(i)]);
-      }catch(e){
-        console.error(e);
-      }
-      try{
-        const url = await ensureTtsUrl(i);
-        if(!url) continue;
-        await new Promise((resolve,reject)=>{
-          player.src = url;
-          player.playbackRate = clamp(parseFloat(rate.value)||1,0.6,1.4);
-          player.onended = resolve;
-          player.onerror = reject;
-          player.play().catch(reject);
+        const base = providerBase();
+        const res = await fetch(base + "/v1/chat/completions",{
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer "+key
+          },
+          body:JSON.stringify({
+            model:"gpt-4o-mini",
+            messages:[
+              {role:"system",content:"You are an assistant that converts English sentences into Simplified Chinese and American English IPA. Respond ONLY with pure JSON like {\"zh\":\"……\",\"ipa\":\"……\"}."},
+              {role:"user",content:EN[i]}
+            ],
+            temperature:0.2
+          })
         });
+        if(!res.ok){
+          const t = await res.text();
+          throw new Error("HTTP "+res.status+" "+t);
+        }
+        const data = await res.json();
+        let text = data.choices?.[0]?.message?.content || "";
+        let jsonStr;
+        const s = text.indexOf("{");
+        const e = text.lastIndexOf("}");
+        if(s !== -1 && e !== -1 && e>s){
+          jsonStr = text.slice(s,e+1);
+        }else{
+          jsonStr = text;
+        }
+        let obj = {};
+        try{ obj = JSON.parse(jsonStr); }catch(e2){
+          // 兜底：尝试简单分行
+          const lines = text.split("\n").map(x=>x.trim()).filter(Boolean);
+          obj.zh = lines[0] || "";
+          obj.ipa = lines[1] || "";
+        }
+        if(obj.zh && $("autoTranslate").checked) meta[i].zh = String(obj.zh);
+        if(obj.ipa && $("autoIpa").checked) meta[i].ipa = String(obj.ipa);
       }catch(err){
         console.error(err);
-        status("TTS 出错："+(err.message||err),true);
-        break;
+        meta[i].error = true;
+        setDiag("翻译 / 音标生成失败："+err.message,true);
+      }finally{
+        meta[i].loading = false;
+        setStatus("");
+        renderSentences();
       }
-      setProgress(((i-start+1)/(EN.length-start))*100);
     }
-  }
 
-  playFromCurrent.onclick = async ()=>{
-    if(!EN.length){
-      alert("请先点击“拆句（不立即翻译）”");
-      return;
+    // ==== TTS ====
+    const player = $("player");
+    let isSpeaking = false;
+    let seqMode = false;
+    const ttsCache = new Map(); // key: provider|voice|text -> objectURL
+
+    function getVoiceId(){
+      const gender = $("voiceGender").value;
+      // 简单映射：男声 -> alloy， 女声 -> verse
+      return gender === "male" ? "alloy" : "verse";
     }
-    speaking = true;
-    showProgress(engine.value==="api");
-    try{
-      if(engine.value==="browser"){
-        await speakBrowserFrom(currentIndex);
+
+    function stopAllAudio(){
+      isSpeaking = false;
+      seqMode = false;
+      try{ speechSynthesis.cancel(); }catch(e){}
+      try{ player.pause(); }catch(e){}
+    }
+
+    async function speakBrowser(text){
+      if(!window.speechSynthesis){
+        alert("当前浏览器不支持浏览器朗读（speechSynthesis）。");
+        return;
+      }
+      stopAllAudio();
+      isSpeaking = true;
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US";
+      u.rate = Number($("rate").value) || 1.0;
+      u.onend = ()=>{ isSpeaking = false; };
+      u.onerror = ()=>{ isSpeaking = false; };
+      speechSynthesis.speak(u);
+      return new Promise(res=>{
+        u.onend = ()=>{ isSpeaking=false; res(); };
+        u.onerror = ()=>{ isSpeaking=false; res(); };
+      });
+    }
+
+    async function speakApi(text){
+      const key = getApiKeyOrWarn();
+      if(!key) return;
+      const base = providerBase();
+      const voice = getVoiceId();
+      const cacheKey = providerSelect.value + "|" + voice + "|" + text;
+      let url = ttsCache.get(cacheKey);
+      if(!url){
+        setStatus("正在生成语音（只会为该句生成一次）…");
+        try{
+          const res = await fetch(base + "/v1/audio/speech",{
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json",
+              "Authorization":"Bearer "+key
+            },
+            body:JSON.stringify({
+              model:"gpt-4o-mini-tts",
+              voice,
+              input:text,
+              format:"mp3"
+            })
+          });
+          if(!res.ok){
+            const t = await res.text();
+            throw new Error("HTTP "+res.status+" "+t);
+          }
+          const buf = await res.arrayBuffer();
+          url = URL.createObjectURL(new Blob([buf],{type:"audio/mpeg"}));
+          ttsCache.set(cacheKey,url);
+        }catch(err){
+          console.error(err);
+          setStatus("TTS 出错："+err.message,true);
+          return;
+        }finally{
+          setStatus("");
+        }
+      }
+      return new Promise((resolve)=>{
+        isSpeaking = true;
+        player.src = url;
+        player.playbackRate = Number($("rate").value) || 1.0;
+        player.onended = ()=>{ resolve(); };
+        player.onerror = ()=>{ resolve(); };
+        player.play().catch(e=>{
+          console.error(e);
+          resolve();
+        });
+      });
+    }
+
+    async function speakSentenceOnce(i){
+      if(!EN[i]) return;
+      highlight(i);
+      await ensureSentenceData(i);
+      const engine = $("engine").value;
+      if(engine === "browser"){
+        await speakBrowser(EN[i]);
       }else{
-        await speakApiFrom(currentIndex);
+        await speakApi(EN[i]);
       }
-    }finally{
-      speaking = false;
-      showProgress(false);
-      setProgress(0);
     }
-  };
 
-  quickBrowser.onclick = async ()=>{
-    const txt = inputEn.value.trim();
-    if(!txt){
-      alert("请先粘贴英文内容");
-      return;
+    // 单句点击
+    async function onSentenceClick(i){
+      highlight(i);
+      const loop = $("loopCurrent").checked;
+      if(loop){
+        stopAllAudio();
+        isSpeaking = true;
+        while(isSpeaking && $("loopCurrent").checked && currentIndex === i){
+          await speakSentenceOnce(i);
+          if(!isSpeaking) break;
+          await sleep(350);
+        }
+      }else{
+        stopAllAudio();
+        await speakSentenceOnce(i);
+      }
     }
-    await ensureVoicesLoaded();
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(txt);
-    u.lang="en-US";
-    u.rate=clamp(parseFloat(rate.value)||1,0.6,1.4);
-    speechSynthesis.speak(u);
-  };
 
-  testHello.onclick = async ()=>{
-    await ensureVoicesLoaded();
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance("Hello, this is a test.");
-    u.lang="en-US";
-    u.rate=clamp(parseFloat(rate.value)||1,0.6,1.4);
-    speechSynthesis.speak(u);
-  };
-
-  stopBtn.onclick = ()=>{
-    speaking = false;
-    speechSynthesis.cancel();
-    player.pause();
-    showProgress(false);
-    setProgress(0);
-  };
-
-  // 点击句子时懒加载翻译 / 音标
-  enCol.addEventListener("click",async e=>{
-    const el = e.target.closest(".sent-row");
-    if(!el) return;
-    const idx = +el.dataset.idx;
-    if(Number.isNaN(idx)) return;
-    setActiveIndex(idx);
-    try{
-      await Promise.all([ensureZh(idx),ensureIpa(idx)]);
-    }catch(err){
-      console.error(err);
-      status("生成翻译 / 音标出错："+(err.message||err),true);
+    // 从当前句开始朗读到末尾
+    async function speakFromCurrent(){
+      if(!EN.length){
+        alert("请先粘贴英文内容并点击“拆句”。");
+        return;
+      }
+      stopAllAudio();
+      isSpeaking = true;
+      seqMode = true;
+      for(let i=currentIndex;i<EN.length && isSpeaking;i++){
+        await speakSentenceOnce(i);
+        if(!isSpeaking) break;
+        currentIndex = i+1;
+        await sleep(450); // 句间停顿
+      }
+      isSpeaking = false;
+      seqMode = false;
     }
-  });
-  zhCol.addEventListener("click",async e=>{
-    const el = e.target.closest(".sent-row");
-    if(!el) return;
-    const idx = +el.dataset.idx;
-    if(Number.isNaN(idx)) return;
-    setActiveIndex(idx);
-    try{
-      await Promise.all([ensureZh(idx),ensureIpa(idx)]);
-    }catch(err){
-      console.error(err);
-      status("生成翻译 / 音标出错："+(err.message||err),true);
-    }
-  });
-</script>
+
+    // ==== 事件 ====
+    $("splitBtn").addEventListener("click",()=>{
+      const txt = inputEn.value.trim();
+      if(!txt){
+        alert("请先粘贴英文内容。");
+        return;
+      }
+      EN = splitLines(txt);
+      if(!EN.length){
+        alert("没有拆出有效句子，请检查文本。");
+        return;
+      }
+      meta = EN.map(()=>({zh:"",ipa:"",loading:false,error:false}));
+      currentIndex = 0;
+      renderSentences();
+      highlight(0);
+      setDiag("已拆句成功：翻译和音标将按需懒加载。",false);
+    });
+
+    $("playFromCurrent").addEventListener("click",()=>{ speakFromCurrent(); });
+
+    $("playBrowserWhole").addEventListener("click",()=>{
+      const txt = inputEn.value.trim();
+      if(!txt){
+        alert("请先粘贴英文内容。");
+        return;
+      }
+      speakBrowser(txt);
+    });
+
+    $("testHello").addEventListener("click",()=>{
+      speakBrowser("Hello! This is a test from your browser.");
+    });
+
+    $("stopBtn").addEventListener("click",()=>{
+      stopAllAudio();
+    });
+
+    // docx 上传
+    $("docx").addEventListener("change",async e=>{
+      const f=e.target.files?.[0];
+      if(!f) return;
+      try{
+        const buf = await f.arrayBuffer();
+        const {value} = await window.mammoth.extractRawText({arrayBuffer:buf});
+        inputEn.value = value.trim();
+        updateCharCount();
+        setDiag("已从 docx 读取文本，请点击“拆句”继续。");
+      }catch(err){
+        console.error(err);
+        alert("读取 docx 失败："+err.message);
+      }
+    });
+
+    // 初始提示
+    setDiag("步骤建议：1）粘贴或上传英文 → 2）点击“拆句” → 3）单句点击朗读或“从当前句开始朗读”。");
+  </script>
 </body>
 </html>
