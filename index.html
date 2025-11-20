@@ -133,9 +133,16 @@
     }
     .timer-box .label{color:var(--muted);font-size:11px;margin-bottom:4px;}
     .timer-box .value{font-size:13px;font-weight:600;}
+    .timer-detail-toggle{
+      font-size:12px;
+      color:var(--c);
+      cursor:pointer;
+    }
     .row{display:flex;gap:8px;flex-wrap:wrap;}
     .row>div{flex:1 1 0;}
-    .slider{width:220px;}
+    .slider{
+      width:220px;
+    }
     .pill{
       display:inline-flex;
       align-items:center;
@@ -148,6 +155,7 @@
     .mt8{margin-top:8px;}
     .mt4{margin-top:4px;}
     .mt12{margin-top:12px;}
+    .mb4{margin-bottom:4px;}
     .sent-container{
       max-height:360px;
       overflow:auto;
@@ -168,17 +176,8 @@
     .sent-row:last-child{border-bottom:none;}
     .sent-row:hover{background:var(--row-hover);}
     .sent-row.active{background:var(--row-active);color:#111827;}
-    .sent-row .zh{
-      background:var(--zh-bg);
-      border-radius:8px;
-      padding:2px 6px;
-      display:inline-block;
-    }
-    .sent-row .ipa{
-      font-size:11px;
-      color:var(--muted);
-      margin-top:2px;
-    }
+    .sent-row .zh{background:var(--zh-bg);border-radius:8px;padding:2px 6px;display:inline-block;}
+    .sent-row .ipa{font-size:11px;color:var(--muted);margin-top:2px;}
     .diag{
       font-size:12px;
       color:#b91c1c;
@@ -208,9 +207,7 @@
   <div class="topbar">
     <div>
       <h1><span class="icon">🎧</span>英文朗读 + 中英同步（OpenAI / APIMart / 浏览器）</h1>
-      <div style="font-size:12px;color:var(--muted);">
-        支持按行拆句、懒加载翻译和音标，尽量节省 API 额度。
-      </div>
+      <div style="font-size:12px;color:var(--muted);">支持按行精准拆句、懒加载翻译和音标，尽量节省 API 额度。</div>
     </div>
     <div class="flex gap8">
       <button id="themeBtn" class="toggle-theme">🌙 深色</button>
@@ -401,6 +398,7 @@
   const ipaCache   = new Map(); // key: en text
   const ttsCache   = new Map(); // key: provider|engine|voice|text => blobUrl
 
+  // ----- 工具函数 -----
   function showDiag(msg, ok=false){
     if(!msg){diag.textContent="";diag.style.display="none";return;}
     diag.textContent = msg;
@@ -594,8 +592,8 @@
 
     const {key:apiKey, base} = getApiConfig();
     const gender = voiceGender.value;
-    // 这里的 voice 名称可以换成 APIMart 面板里支持的其它声音
-    const voice = gender==="female" ? "alloy" : "alloy";
+    // 这里的 voice 名称可以根据你在 APIMart / OpenAI 那边实际开通的声音做调整
+    const voice = gender==="female" ? "alloy" : "alloy"; // 如果你的代理支持其它 voice，可以改成不同的
     const body = {
       model:"gpt-4o-mini-tts",
       voice,
@@ -730,7 +728,7 @@
   }
 
   function renderRow(i){
-    const row = sentContainer.querySelector(\`.sent-row[data-index="\${i}"]\`);
+    const row = sentContainer.querySelector(`.sent-row[data-index="${i}"]`);
     if(!row) return;
     row.innerHTML = "";
     const enSpan = document.createElement("div");
@@ -839,6 +837,7 @@
   let sessionSeconds = 0;
   let timerRunning = false;
   let lastTick = Date.now();
+  let timerHandle = null;
 
   function loadTimer(){
     try{
@@ -855,24 +854,24 @@
     const y=d.getFullYear();
     const m=String(d.getMonth()+1).padStart(2,"0");
     const d2=String(d.getDate()).padStart(2,"0");
-    return \`\${y}-\${m}-\${d2}\`;
+    return `${y}-${m}-${d2}`;
   }
   function fmtHMS(sec){
     sec = Math.max(0,Math.floor(sec));
     const h=Math.floor(sec/3600);
     const m=Math.floor((sec%3600)/60);
     const s=sec%60;
-    return \`\${String(h).padStart(2,"0")}:\${String(m).padStart(2,"0")}:\${String(s).padStart(2,"0")}\`;
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   }
   function fmtHM(sec){
     sec = Math.max(0,Math.floor(sec));
     const h=Math.floor(sec/3600);
     const m=Math.floor((sec%3600)/60);
-    return \`\${h}小时\${m}分钟\`;
+    return `${h}小时${m}分钟`;
   }
   function minutesStr(sec){
     const m=Math.round(sec/60);
-    return \`\${m}分钟\`;
+    return `${m}分钟`;
   }
   function sumRange(start,end){
     const s = new Date(start.getFullYear(),start.getMonth(),start.getDate());
@@ -936,7 +935,7 @@
   timerToggle.addEventListener("click", ()=>{
     timerRunning = !timerRunning;
     lastTick = Date.now();
-    if(timerRunning){
+    if(timerRunning && !timerHandle){
       requestAnimationFrame(tickTimer);
     }
     renderTimer();
@@ -947,6 +946,7 @@
   });
   document.addEventListener("visibilitychange",()=>{
     if(document.visibilityState==="hidden"){
+      // 保守：暂停计时，避免后台误计
       timerRunning = false;
       renderTimer();
     }
@@ -956,6 +956,7 @@
   loadSettings();
   loadTimer();
   renderTimer();
+  // 如果用户之前有 key，默认帮他开计时
   if(apiKeyInput.value.trim()){
     timerRunning = true;
     lastTick = Date.now();
