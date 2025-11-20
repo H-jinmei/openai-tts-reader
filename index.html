@@ -210,7 +210,7 @@
     <div class="toolbar">
       <button id="themeBtn" class="toggle-theme" title="切换黑/白模式">🌙 深色</button>
 
-      <!-- 学习时长组件 -->
+      <!-- 学习时长组件（挨着主题按钮） -->
       <div id="studyWidget" class="card study">
         <div class="hdr">
           <div class="title">⏱ 学习时长</div>
@@ -253,11 +253,11 @@
 
     <!-- Keys -->
     <div class="card">
-      <label>OpenAI API Key（用于翻译 & 生成美式音标；也可用于 OpenAI TTS）</label>
+      <label>API Key（用于翻译 & 生成美式音标 & OpenAI TTS）</label>
       <div class="row">
-        <input id="openaiKey" type="password" placeholder="sk-...（仅保存在本地浏览器）" />
+        <input id="openaiKey" type="password" placeholder="在这里填 APIMart 的 sk-... 密钥（仅保存在本地浏览器）" />
         <div class="flex between">
-          <small>不开启翻译/音标或 OpenAI TTS 时，可以不填。浏览器朗读不消耗额度。</small>
+          <small>提示：现在这里既可以填 OpenAI 官方 Key，也可以填 APIMart 的代理 Key。</small>
           <button id="saveKeys" class="btn outline">保存设置</button>
         </div>
         <div id="saveHint" style="display:none;color:#16a34a;font-size:12px">已保存到本地 ✓</div>
@@ -290,7 +290,7 @@
           <input type="file" id="docx" accept=".docx" />
           <span id="charCount" class="pill">0 chars</span>
         </div>
-        <div class="flex" style="gap:16px;flex-wrap:wrap">
+        <div class="flex" style="gap:16px">
           <label class="flex" style="gap:6px;align-items:center">
             <span>自动翻译中文</span>
             <input id="translateChk" type="checkbox" checked />
@@ -299,10 +299,6 @@
             <span>显示美式音标</span>
             <input id="ipaChk" type="checkbox" />
           </label>
-          <label class="flex" style="gap:6px;align-items:center">
-            <span>朗读时自动生成翻译/音标</span>
-            <input id="autoOnSpeak" type="checkbox" checked />
-          </label>
         </div>
       </div>
       <div class="flex between" style="margin-top:10px">
@@ -310,7 +306,7 @@
           <label>朗读引擎：</label>
           <select id="engine">
             <option value="browser">浏览器（免费）</option>
-            <option value="openai">OpenAI TTS</option>
+            <option value="openai">OpenAI TTS（走 APIMart 代理 或 官方）</option>
             <option value="eleven">ElevenLabs</option>
           </select>
         </div>
@@ -320,7 +316,7 @@
         </div>
       </div>
       <div class="flex" style="margin-top:10px;flex-wrap:wrap;gap:10px">
-        <button id="prep" class="btn">拆句（不立即翻译）</button>
+        <button id="prep" class="btn">拆句 & 翻译音标</button>
         <button id="playFromCurrent" class="btn">从当前句开始朗读</button>
         <button id="quickSpeak" class="btn outline">直接朗读整段（浏览器）</button>
         <button id="testSpeak" class="btn outline">测试朗读（Hello）</button>
@@ -354,7 +350,6 @@
     const docx=$("docx");
     const translateChk=$("translateChk");
     const ipaChk=$("ipaChk");
-    const autoOnSpeak=$("autoOnSpeak");
     const engine=$("engine");
     const rate=$("rate");
     const rateVal=$("rateVal");
@@ -389,30 +384,12 @@
       XI:"xiKey",
       XIVOICE:"xiVoice",
       THEME:"study:theme",
-      DAILY:"study:dailySeconds",
-      SENT_CACHE:"ttsSentenceCacheV1"
+      DAILY:"study:dailySeconds"   // { "YYYY-MM-DD": seconds }
     };
 
-    // ====== 句子缓存：同一句只生成一次 ======
-    function loadSentenceCache(){
-      try{
-        const raw = localStorage.getItem(LS_KEYS.SENT_CACHE);
-        if(!raw) return {};
-        const obj = JSON.parse(raw);
-        return obj && typeof obj === "object" ? obj : {};
-      }catch(e){
-        console.warn("加载缓存失败", e);
-        return {};
-      }
-    }
-    function saveSentenceCache(map){
-      try{
-        localStorage.setItem(LS_KEYS.SENT_CACHE, JSON.stringify(map));
-      }catch(e){
-        console.warn("保存缓存失败", e);
-      }
-    }
-    let sentenceCache = loadSentenceCache();
+    // ⭐ 统一的 OpenAI / APIMart 基础地址
+    // 如果你以后改回官方 OpenAI，改成 "https://api.openai.com" 即可
+    const OPENAI_BASE = "https://api.apimart.ai";
 
     // 读取密钥
     try{
@@ -498,22 +475,6 @@
       return cleaned.split(/(?<=[.!?])\s+/).filter(Boolean);
     }
 
-    // 行高对齐：中英每一行同高
-    function syncRowHeights() {
-      const ens = enCol.children;
-      const zhs = zhCol.children;
-      const n = Math.min(ens.length, zhs.length);
-      for (let i = 0; i < n; i++) {
-        ens[i].style.minHeight = "";
-        zhs[i].style.minHeight = "";
-      }
-      for (let i = 0; i < n; i++) {
-        const h = Math.max(ens[i].offsetHeight, zhs[i].offsetHeight);
-        ens[i].style.minHeight = h + "px";
-        zhs[i].style.minHeight = h + "px";
-      }
-    }
-
     function renderCols(){
       enCol.innerHTML=""; zhCol.innerHTML="";
       EN.forEach((s,i)=>{
@@ -522,7 +483,7 @@
         const ipa = PH[i] ? `<div class="ipa">/${PH[i]}/</div>` : "";
         d.innerHTML = `<div>${s}</div>${ipa}`;
         d.dataset.idx=i;
-        d.onclick=()=>onSentenceClick(i);
+        d.onclick=()=>{highlight(i); speakFrom(i);};
         enCol.appendChild(d);
 
         const z=document.createElement("div");
@@ -530,27 +491,13 @@
         z.textContent=ZH[i]||"";
         zhCol.appendChild(z);
       });
-
-      requestAnimationFrame(syncRowHeights);
     }
-
     function highlight(i){
       currentIndex=i;
       [...enCol.children].forEach((el,idx)=> el.classList.toggle("active",idx===i));
       [...zhCol.children].forEach((el,idx)=> el.classList.toggle("active",idx===i));
       enCol.children[i]?.scrollIntoView({behavior:"smooth",block:"center"});
       zhCol.children[i]?.scrollIntoView({behavior:"smooth",block:"center"});
-      requestAnimationFrame(syncRowHeights);
-    }
-
-    function onSentenceClick(i){
-      // 点击句子：总是从这里开始朗读
-      highlight(i);
-      // 手动模式：只在点击时生成翻译/音标
-      if(!autoOnSpeak.checked){
-        ensureSentenceProcessed(i);
-      }
-      speakFrom(i);
     }
 
     // 读取 docx
@@ -561,100 +508,94 @@
       inputEn.value=value.trim(); updateCount();
     });
 
-    // ===== 按需生成当前句翻译 & IPA（带缓存） =====
-    async function ensureSentenceProcessed(i){
-      if(i<0 || i>=EN.length) return;
-      if(!translateChk.checked && !ipaChk.checked) return;
-
-      const text = EN[i];
-      if(!text) return;
-
-      // 先从缓存里找
-      const cached = sentenceCache[text];
-      if(cached){
-        if(translateChk.checked && cached.zh && !ZH[i]) ZH[i]=cached.zh;
-        if(ipaChk.checked && cached.ipa && !PH[i]) PH[i]=cached.ipa;
-
-        if((!translateChk.checked || cached.zh) &&
-           (!ipaChk.checked || cached.ipa)){
-          renderCols(); highlight(i);
-          return; // 缓存里已经有需要的内容
-        }
-      }
-
-      const key = openaiKeyEl.value.trim();
+    // 翻译（走 APIMart 的 /v1/chat/completions）
+    async function translateBySentence(arr){
+      if(!translateChk.checked) return new Array(arr.length).fill("");
+      const key=openaiKeyEl.value.trim();
       if(!key){
-        alert("生成翻译/音标需要先填写 OpenAI API Key");
-        return;
+        alert("开启了自动翻译，请先填写 API Key，或先关掉自动翻译");
+        return new Array(arr.length).fill("");
       }
-
-      statusEl.textContent="正在生成当前句的翻译和音标…";
-      hideDiag();
-
-      const wantZh = translateChk.checked;
-      const wantIpa = ipaChk.checked;
-
-      const sysPrompt =
-        "You are an assistant for English learning. " +
-        "For a given English sentence, output a JSON object {\"zh\": string, \"ipa\": string}. " +
-        (wantZh ? "Translate the sentence into Simplified Chinese in field 'zh'. " : "Set 'zh' to an empty string. ") +
-        (wantIpa ? "Provide American English IPA transcription (no slashes) in field 'ipa'. "
-                 : "Set 'ipa' to an empty string. ") +
-        "Reply ONLY with valid JSON.";
-
-      const payload = {
-        model:"gpt-4o-mini",
-        messages:[
-          {role:"system",content:sysPrompt},
-          {role:"user",content:text}
-        ],
-        temperature:0,
-        response_format:{type:"json_object"}
-      };
-
+      statusEl.textContent="正在逐句翻译…"; hideDiag();
+      const prompt="Translate each English sentence into Simplified Chinese. Return ONLY a JSON array of strings, same length and order as input. No commentary.";
+      const content=arr.map((s,i)=>`${i+1}. ${s}`).join("\n");
+      const res=await fetch(`${OPENAI_BASE}/v1/chat/completions`,{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":`Bearer ${key}`
+        },
+        body:JSON.stringify({
+          model:"gpt-4o-mini",
+          messages:[
+            {role:"system",content:prompt},
+            {role:"user",content}
+          ],
+          temperature:0.2
+        })
+      });
+      if(!res.ok){
+        statusEl.textContent="翻译失败";
+        showDiag("翻译错误："+await res.text());
+        return new Array(arr.length).fill("");
+      }
+      const data=await res.json();
+      const out=data.choices?.[0]?.message?.content||"";
       try{
-        const res = await fetch("https://api.openai.com/v1/chat/completions",{
-          method:"POST",
-          headers:{
-            "Content-Type":"application/json",
-            "Authorization":`Bearer ${key}`
-          },
-          body:JSON.stringify(payload)
-        });
-
-        if(!res.ok){
-          const errText = await res.text();
-          statusEl.textContent="生成失败（API 错误）";
-          showDiag("当前句生成失败：" + errText);
-          return;
-        }
-
-        const data = await res.json();
-        const raw = data.choices?.[0]?.message?.content || "{}";
-        let obj={};
-        try{ obj = JSON.parse(raw); }catch(e){ obj={}; }
-
-        const zh = typeof obj.zh === "string" ? obj.zh.trim() : "";
-        const ipa = typeof obj.ipa === "string" ? obj.ipa.trim() : "";
-
-        if(wantZh && zh) ZH[i]=zh;
-        if(wantIpa && ipa) PH[i]=ipa;
-
-        sentenceCache[text] = { zh, ipa };
-        saveSentenceCache(sentenceCache);
-
-        renderCols();
-        highlight(i);
-      }catch(e){
-        statusEl.textContent="生成失败（网络异常）";
-        showDiag("当前句生成异常：" + (e?.message || e));
+        const s=out.indexOf("["), e=out.lastIndexOf("]");
+        return JSON.parse(out.slice(s,e+1)).map(String);
+      }catch{
+        return out.split(/\n+/).map(x=>x.trim());
       }finally{
         statusEl.textContent="";
       }
     }
 
-    // 预处理（只拆句 + 尝试用缓存预填）
-    prep.addEventListener("click",()=>{
+    // IPA（同样走 APIMart 的 chat 接口）
+    async function ipaBySentence(arr){
+      if(!ipaChk.checked) return new Array(arr.length).fill("");
+      const key=openaiKeyEl.value.trim();
+      if(!key){
+        alert("显示美式音标需要 API Key（或先关闭“显示美式音标”）");
+        return new Array(arr.length).fill("");
+      }
+      statusEl.textContent="正在生成美式音标…"; hideDiag();
+      const prompt="You are a phonetics assistant. For each English sentence, output its American IPA transcription. Return ONLY a JSON array of strings (no numbering, no extra text). Use IPA symbols; do NOT include surrounding slashes.";
+      const content=arr.join("\n");
+      const res=await fetch(`${OPENAI_BASE}/v1/chat/completions`,{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":`Bearer ${key}`
+        },
+        body:JSON.stringify({
+          model:"gpt-4o-mini",
+          messages:[
+            {role:"system",content:prompt},
+            {role:"user",content}
+          ],
+          temperature:0
+        })
+      });
+      if(!res.ok){
+        statusEl.textContent="音标生成失败";
+        showDiag("音标错误："+await res.text());
+        return new Array(arr.length).fill("");
+      }
+      const data=await res.json();
+      const out=data.choices?.[0]?.message?.content||"";
+      try{
+        const s=out.indexOf("["), e=out.lastIndexOf("]");
+        return JSON.parse(out.slice(s,e+1)).map(String);
+      }catch{
+        return new Array(arr.length).fill("");
+      }finally{
+        statusEl.textContent="";
+      }
+    }
+
+    // 预处理
+    prep.addEventListener("click",async()=>{
       const txt=inputEn.value.trim();
       if(!txt){ alert("请先粘贴英文内容"); return; }
       EN=splitSentences(txt);
@@ -664,16 +605,13 @@
       }
       ZH=new Array(EN.length).fill("");
       PH=new Array(EN.length).fill("");
-      // 尝试从缓存中预填
-      EN.forEach((s,i)=>{
-        const cached = sentenceCache[s];
-        if(cached){
-          if(cached.zh) ZH[i]=cached.zh;
-          if(cached.ipa) PH[i]=cached.ipa;
-        }
-      });
       currentIndex=0;
       renderCols(); highlight(0);
+      try{
+        ZH=await translateBySentence(EN);
+        PH=await ipaBySentence(EN);
+        renderCols(); highlight(0);
+      }catch(e){console.error(e);}
     });
 
     // 朗读相关
@@ -691,11 +629,11 @@
         return;
       }
       if(!EN.length){
-        alert("还没有句子可读，请先点击“拆句（不立即翻译）”");
+        alert("还没有句子可读，请先“拆句 & 翻译音标”");
         return;
       }
       if(eng!=="browser"){
-        if(eng==="openai" && !openaiKeyEl.value.trim()) return alert("OpenAI 模式需要 OpenAI Key");
+        if(eng==="openai" && !openaiKeyEl.value.trim()) return alert("OpenAI/APIMart 模式需要 API Key");
         if(eng==="eleven" && !xiKeyEl.value.trim()) return alert("ElevenLabs 模式需要 ElevenLabs Key");
       }
       isSpeaking=true;
@@ -717,9 +655,6 @@
       speechSynthesis.cancel();
       for(let i=start;i<EN.length;i++){
         highlight(i);
-        if(autoOnSpeak.checked){
-          await ensureSentenceProcessed(i);
-        }
         const u=new SpeechSynthesisUtterance(EN[i]);
         u.lang="en-US"; u.rate=clamp(parseFloat(rate.value),0.6,1.4);
         await new Promise(res=>{
@@ -734,17 +669,17 @@
       const key=openaiKeyEl.value.trim();
       for(let i=start;i<EN.length;i++){
         highlight(i);
-        if(autoOnSpeak.checked){
-          await ensureSentenceProcessed(i);
-        }
         const url=await openaiTts(EN[i],key);
         await play(url);
         setBar(((i-start+1)/(EN.length-start))*100);
         if(!isSpeaking) break;
       }
     }
+
+    // ⭐ 使用 APIMart 代理的 TTS（/v1/audio/speech）
     async function openaiTts(text,key){
-      const res=await fetch("https://api.openai.com/v1/audio/speech",{
+      const speed = clamp(parseFloat(rate.value)||1.0,0.6,1.4);
+      const res=await fetch(`${OPENAI_BASE}/v1/audio/speech`,{
         method:"POST",
         headers:{
           "Content-Type":"application/json",
@@ -752,14 +687,17 @@
         },
         body:JSON.stringify({
           model:"gpt-4o-mini-tts",
-          voice:"alloy",
           input:text,
-          format:"mp3"
+          voice:"alloy",
+          // 按 APIMart 文档，用 response_format
+          response_format:"opus",   // 默认 opus，更通用
+          speed
         })
       });
       if(!res.ok) throw new Error(await res.text());
       const buf=await res.arrayBuffer();
-      return URL.createObjectURL(new Blob([buf],{type:"audio/mpeg"}));
+      // opus 一般用 ogg 容器，浏览器可以直接播放
+      return URL.createObjectURL(new Blob([buf],{type:"audio/ogg"}));
     }
 
     async function speakElevenFrom(start){
@@ -767,9 +705,6 @@
       const vid=xiVoiceEl.value.trim();
       for(let i=start;i<EN.length;i++){
         highlight(i);
-        if(autoOnSpeak.checked){
-          await ensureSentenceProcessed(i);
-        }
         const url=await elevenTts(EN[i],key,vid);
         await play(url);
         setBar(((i-start+1)/(EN.length-start))*100);
@@ -894,7 +829,7 @@
     let sessionSeconds = 0;
     let tickTimer = null;
     let visible = document.visibilityState === "visible";
-    let running = true;
+    let running = true;  // 是否正在计时
 
     function sumRange(startDate,endDate){
       const s=new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
@@ -957,11 +892,6 @@
 
     btnTimer.addEventListener("click",()=>{
       setRunning(!running);
-    });
-
-    // 窗口尺寸变化时，重新对齐中英文行高
-    window.addEventListener("resize", () => {
-      requestAnimationFrame(syncRowHeights);
     });
 
     // 默认进入页面就开始计时
