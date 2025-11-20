@@ -1,505 +1,499 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>英文朗读 + 中英同步（OpenAI / 浏览器）</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>英文朗读 + 中英同步（OpenAI / APIMart / 浏览器）</title>
   <style>
     :root{
-      --c:#2563eb;--b:#0ea5e9;
-      --bg:#f8fafc;--txt:#0f172a;--muted:#64748b;
-      --card:#ffffff;--border:#e5e7eb;--shadow:0 2px 6px rgba(15,23,42,.06);
-      --chip-bg:#e0edff;--chip-txt:#1d4ed8;
-      --accent-soft:#eef2ff;--accent-bd:#a5b4fc;--accent-txt:#4338ca;
-      --green-soft:#ecfdf5;--green-bd:#6ee7b7;--green-txt:#065f46;
+      --bg:#f8fafc;
+      --txt:#0f172a;
+      --muted:#64748b;
+      --card:#ffffff;
+      --border:#e5e7eb;
+      --shadow:0 2px 4px rgba(15,23,42,.04);
+      --primary:#2563eb;
+      --primary-soft:#e0edff;
+      --accent:#0ea5e9;
+      --accent-soft:#e0f2fe;
+      --row-hover:rgba(15,23,42,0.02);
+      --row-active:#e0edff;
     }
-    .dark{
-      --bg:#020617;--txt:#e5e7eb;--muted:#9ca3af;
-      --card:#020617;--border:#1f2937;--shadow:0 2px 14px rgba(0,0,0,.45);
-      --chip-bg:#0b1120;--chip-txt:#93c5fd;
-      --accent-soft:#0b1220;--accent-bd:#1d4ed8;--accent-txt:#93c5fd;
-      --green-soft:#022c22;--green-bd:#0f766e;--green-txt:#a7f3d0;
+    body.dark{
+      --bg:#020617;
+      --txt:#e5e7eb;
+      --muted:#9ca3af;
+      --card:#020617;
+      --border:#1f2937;
+      --shadow:0 2px 10px rgba(0,0,0,.45);
+      --primary:#60a5fa;
+      --primary-soft:#0b1120;
+      --accent:#38bdf8;
+      --accent-soft:#082f49;
+      --row-hover:rgba(148,163,184,0.16);
+      --row-active:#0b1120;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%}
+
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;height:100%;}
     body{
-      margin:0;
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
       background:var(--bg);
       color:var(--txt);
     }
-    .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 40px}
+    a{color:var(--primary);}
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:18px 16px 40px;
+    }
+
     h1{
-      font-size:22px;
-      margin:0 0 8px;
+      font-size:20px;
+      margin:0 0 4px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    h1 span.emoji{font-size:22px;}
+    .sub{
+      font-size:12px;
+      color:var(--muted);
+      margin-bottom:12px;
+    }
+
+    .top-bar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:8px;
+    }
+    .top-right{
       display:flex;
       align-items:center;
       gap:10px;
-      color:var(--c);
+      flex-wrap:wrap;
     }
-    .sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:var(--card);
+      border:1px solid var(--border);
+      font-size:12px;
+      box-shadow:var(--shadow);
+    }
+    .btn{
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:var(--card);
+      color:var(--txt);
+      padding:6px 12px;
+      font-size:12px;
+      cursor:pointer;
+    }
+    .btn.primary{
+      background:var(--primary);
+      color:#fff;
+      border-color:var(--primary);
+    }
+    .btn.sm{padding:4px 10px;font-size:11px;}
+    .btn:disabled{opacity:.5;cursor:not-allowed;}
+
     .card{
       background:var(--card);
       border-radius:16px;
       border:1px solid var(--border);
-      box-shadow:var(--shadow);
       padding:14px 16px;
-      margin-top:14px;
+      margin-top:10px;
+      box-shadow:var(--shadow);
     }
-    label{font-size:14px;font-weight:600}
-    input,textarea,select{
-      font-family:inherit;
-      font-size:14px;
-      border-radius:10px;
-      border:1px solid #cbd5e1;
-      padding:8px 10px;
+    label{
+      font-size:13px;
+      font-weight:600;
+      display:block;
+      margin-bottom:6px;
+    }
+    input[type="text"],
+    input[type="password"],
+    select,
+    textarea{
       width:100%;
+      border-radius:10px;
+      border:1px solid var(--border);
       background:transparent;
       color:inherit;
-    }
-    textarea{min-height:150px;resize:vertical}
-    small{color:var(--muted);font-size:12px}
-    .flex{display:flex;align-items:center;gap:8px}
-    .between{justify-content:space-between}
-    .btn{
-      border-radius:999px;
-      border:none;
-      padding:7px 14px;
+      padding:8px 10px;
       font-size:13px;
-      cursor:pointer;
-      background:var(--c);
-      color:#fff;
-      white-space:nowrap;
     }
-    .btn.outline{
-      background:transparent;
-      color:var(--txt);
-      border:1px solid #cbd5e1;
-    }
-    .btn.small{padding:4px 10px;font-size:11px}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .toolbar{
+    textarea{min-height:140px;resize:vertical;}
+    small{font-size:12px;color:var(--muted);}
+    .row-flex{
       display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      margin-bottom:6px;
-      gap:10px;
       flex-wrap:wrap;
-    }
-    .pill{
-      display:inline-flex;
+      gap:10px;
       align-items:center;
-      gap:4px;
-      padding:3px 10px;
-      border-radius:999px;
-      border:1px solid var(--chip-bg);
-      background:var(--chip-bg);
-      color:var(--chip-txt);
-      font-size:12px;
+      justify-content:space-between;
+      margin-top:6px;
     }
-    .rows{
-      margin-top:10px;
-      max-height:60vh;
+    .row-flex > *{flex:1 1 auto;}
+    .row-flex .right{flex:0 0 auto;}
+
+    .badge{
+      display:inline-block;
+      font-size:11px;
+      padding:1px 8px;
+      border-radius:999px;
+      background:var(--primary-soft);
+      color:var(--primary);
+      margin-left:6px;
+    }
+
+    .slider{width:220px;}
+    .controls{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:12px;
+    }
+
+    .sent-list-wrap{
+      max-height:420px;
       overflow:auto;
+      margin-top:10px;
       border-radius:12px;
       border:1px solid var(--border);
     }
-    .row{
+    .sent-row{
       display:grid;
-      grid-template-columns:minmax(0,1.4fr) minmax(0,1.1fr);
-      gap:8px;
-      padding:10px 12px;
-      border-bottom:1px solid rgba(148,163,184,.35);
+      grid-template-columns:1.5fr 1.5fr;
+      gap:12px;
+      padding:8px 12px;
+      border-bottom:1px solid rgba(148,163,184,0.25);
       cursor:pointer;
+      transition:background .12s;
     }
-    .row:last-child{border-bottom:none}
-    .row:hover{
-      background:rgba(148,163,184,.06);
-    }
-    .row.active{
-      background:var(--accent-soft);
-      border-color:var(--accent-bd);
-      color:var(--accent-txt);
-    }
-    .row .zh{
-      display:flex;
-      align-items:center;
-      color:inherit;
-    }
-    .en-main{font-size:14px;margin-bottom:3px}
-    .ipa{font-size:12px;color:var(--muted);}
-    .zh-text{font-size:14px}
-    .status{font-size:12px;color:var(--muted);margin-top:6px}
-    .status.bad{color:#b91c1c}
-    .status.good{color:#0f766e}
-    .checks{
-      display:flex;
-      gap:20px;
-      margin-top:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    .checks label{
-      font-weight:500;
-      font-size:13px;
-      display:flex;
-      align-items:center;
-      gap:6px;
-    }
-    .top-controls{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:8px;
-    }
-    .top-controls .left,
-    .top-controls .right{display:flex;gap:8px;flex-wrap:wrap}
-    .chip-note{
-      font-size:12px;
-      color:var(--muted);
-      margin-top:4px;
-    }
-    .api-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center}
-    .api-row select{width:auto}
-    .api-row small{margin-top:0}
-    @media (max-width:720px){
-      .row{grid-template-columns:1fr}
+    .sent-row:last-child{border-bottom:none;}
+    .sent-row:hover{background:var(--row-hover);}
+    .sent-row.active{
+      background:var(--row-active);
+      box-shadow:inset 2px 0 0 var(--primary);
     }
 
-    /* 学习时长组件 */
-    .study.card{
-      margin-top:0;
-      padding:8px 12px;
-      max-width:480px;
+    .sent-en-main{font-size:14px;margin-bottom:3px;}
+    .sent-ipa{font-size:11px;color:var(--muted);}
+    .sent-zh{font-size:14px;}
+
+    .status{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+      white-space:pre-wrap;
     }
-    .study .hdr{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      margin-bottom:4px;
-      gap:8px;
-    }
-    .study .title{font-weight:700;font-size:13px}
-    .study .hdr-btns{
-      display:flex;
-      gap:6px;
-      flex-shrink:0;
-    }
-    .study .compact{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-    .study .kpi{
-      display:flex;
-      gap:6px;
-      align-items:baseline;
-      background:var(--chip-bg);
-      border:1px solid var(--chip-bg);
-      color:var(--chip-txt);
-      padding:4px 10px;
+
+    .pill{
+      display:inline-block;
+      padding:2px 8px;
       border-radius:999px;
+      background:var(--primary-soft);
+      color:var(--primary);
       font-size:11px;
     }
-    .study .kpi .num{font-weight:800;font-variant-numeric:tabular-nums}
-    .study .detail{display:none;margin-top:8px}
-    .study.open .detail{display:block}
-    .study .grid{
+
+    .checkbox-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:24px;
+      margin-top:10px;
+      font-size:13px;
+      align-items:center;
+    }
+    .checkbox-row label{
+      margin:0;
+      font-weight:400;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      cursor:pointer;
+    }
+
+    /* 学习时长详情 */
+    .study-detail{
+      margin-top:8px;
+      border-top:1px dashed var(--border);
+      padding-top:8px;
+      display:none;
+    }
+    .study-grid{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:repeat(4,minmax(0,1fr));
       gap:8px;
     }
-    .study .box{
-      padding:8px;
-      border:1px solid var(--border);
+    .study-box{
       border-radius:10px;
-      font-size:12px;
+      border:1px solid var(--border);
+      padding:6px 8px;
+      font-size:11px;
     }
-    .study .label{font-size:11px;color:var(--muted);margin-top:6px}
+    .study-label{color:var(--muted);margin-bottom:2px;font-size:11px;}
+    .study-val{font-weight:600;font-size:12px;}
+
+    @media (max-width:768px){
+      .sent-row{grid-template-columns:1.6fr;}
+      .study-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    }
   </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="toolbar">
+  <div class="top-bar">
     <div>
-      <h1>🎧 英文朗读 + 中英同步（OpenAI / 浏览器）</h1>
-      <div class="sub">支持按句精准朗读、懒加载翻译和音标，尽量节省 API 额度。</div>
+      <h1><span class="emoji">📖</span>英文朗读 + 中英同步（OpenAI / APIMart / 浏览器）</h1>
+      <div class="sub">支持按句精准朗读、懒加载翻译和音标、尽量节省 API 额度。</div>
     </div>
-    <div class="flex" style="gap:10px;align-items:stretch">
-      <button id="themeBtn" class="btn outline">🌙 深色</button>
-      <!-- 学习时长组件 -->
-      <div id="studyWidget" class="card study">
-        <div class="hdr">
-          <div class="title">⏱ 学习时长</div>
-          <div class="hdr-btns">
-            <button id="toggleTimer" class="btn outline small">暂停</button>
-            <button id="toggleDetail" class="btn outline small">详情</button>
-          </div>
-        </div>
-        <div class="compact">
-          <div class="kpi"><span>本次</span><span class="num" id="kThis">00:00:00</span></div>
-          <div class="kpi"><span>总计</span><span class="num" id="kTotal">0小时0分钟</span></div>
-        </div>
-        <div class="detail">
-          <div class="grid" style="margin-top:6px">
-            <div class="box">
-              <div class="label">今天</div>
-              <div id="kDay">0分钟</div>
-            </div>
-            <div class="box">
-              <div class="label">本周（周一-周日）</div>
-              <div id="kWeek">0分钟</div>
-            </div>
-            <div class="box">
-              <div class="label">本月</div>
-              <div id="kMonth">0分钟</div>
-            </div>
-            <div class="box">
-              <div class="label">今年</div>
-              <div id="kYear">0分钟</div>
-            </div>
-          </div>
-          <div class="label">
-            说明：只有页面在前台且计时为“开始”时才会累积；数据保存在浏览器 localStorage，按自然日记录。
-          </div>
-        </div>
+    <div class="top-right">
+      <button id="themeToggle" class="btn sm">🌙 深色</button>
+      <div class="chip" id="sessionChip">本次：<span id="sessionTime">00:00:00</span></div>
+      <div class="chip">
+        总计：<span id="totalTime">0小时0分钟</span>
+        <button id="studyToggle" class="btn sm" style="margin-left:6px;">详情</button>
       </div>
     </div>
   </div>
 
-  <!-- API & 服务商 -->
-  <div class="card">
-    <label for="apiKey">API Key（用于翻译 / 音标 / OpenAI TTS）</label>
-    <input id="apiKey" type="password" placeholder="sk-...  可填 OpenAI 官方 Key 或 APIMart 代理 Key（仅保存在本地）">
-    <div class="api-row">
-      <label style="font-weight:500;font-size:13px">服务商：</label>
-      <select id="backend">
-        <option value="openai">OpenAI 官方</option>
-        <option value="apimart">APIMart 代理</option>
-      </select>
-      <small>如果用 APIMart 的 Key，请选“APIMart 代理”，否则会报 invalid_api_key。</small>
+  <!-- 学习时长详情 -->
+  <div id="studyDetail" class="study-detail card" style="padding:10px 12px;">
+    <div class="study-grid">
+      <div class="study-box">
+        <div class="study-label">今天</div>
+        <div class="study-val" id="kToday">0分钟</div>
+      </div>
+      <div class="study-box">
+        <div class="study-label">本周（周一-周日）</div>
+        <div class="study-val" id="kWeek">0分钟</div>
+      </div>
+      <div class="study-box">
+        <div class="study-label">本月</div>
+        <div class="study-val" id="kMonth">0分钟</div>
+      </div>
+      <div class="study-box">
+        <div class="study-label">今年</div>
+        <div class="study-val" id="kYear">0分钟</div>
+      </div>
     </div>
-    <button id="saveKey" class="btn outline" style="margin-top:6px">保存到本地</button>
-    <div id="saveHint" class="chip-note" style="display:none;color:#16a34a">已保存 ✓</div>
+    <div class="study-label" style="margin-top:6px;">
+      说明：仅在页面前台、计时器运行时累计；按自然日 / 周 / 月 / 年统计，数据存储在浏览器 localStorage。
+    </div>
   </div>
 
-  <!-- 输入区 -->
+  <!-- API Key & 服务商 -->
   <div class="card">
-    <label for="inputEn">英文内容（粘贴或上传 .docx）</label>
-    <textarea id="inputEn" placeholder="Paste your English text here..."></textarea>
-    <div class="top-controls">
-      <div class="left">
-        <div class="flex">
-          <input type="file" id="docx" accept=".docx">
-          <span id="charCount" class="pill">0 chars</span>
-        </div>
+    <label>API Key（用于翻译 / 音标 / OpenAI & APIMart TTS）</label>
+    <input id="apiKeyInput" type="password" placeholder="在此粘贴 OpenAI 官方 Key 或 APIMart Key（sk-...），仅保存在本地浏览器" />
+    <div class="row-flex">
+      <div>
+        <small id="providerHint">说明：只在需要翻译、音标或调用 TTS 时才会用到。</small>
       </div>
-      <div class="right checks">
-        <label>
-          <input type="checkbox" id="autoZh" checked>
-          自动翻译中文（懒加载，每句只翻一次）
+      <div class="right" style="display:flex;gap:8px;align-items:center;">
+        <label style="font-size:12px;font-weight:500;">
+          服务商：
+          <select id="providerSelect" style="width:auto;min-width:130px;font-size:12px;">
+            <option value="apimart">APIMart 代理（推荐省钱）</option>
+            <option value="openai">OpenAI 官方</option>
+          </select>
         </label>
-        <label>
-          <input type="checkbox" id="autoIpa">
-          显示美式音标（懒加载，每句只生成一次）
-        </label>
+        <button id="saveKeyBtn" class="btn sm">保存到本地</button>
+      </div>
+    </div>
+    <div id="saveKeyStatus" class="status"></div>
+  </div>
+
+  <!-- 英文内容输入 -->
+  <div class="card">
+    <label>英文内容（粘贴文本或上传 .docx）</label>
+    <textarea id="inputText" placeholder="Paste your English text here..."></textarea>
+    <div class="row-flex" style="margin-top:6px;">
+      <div class="left" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <input type="file" id="fileInput" accept=".docx" />
+        <span class="pill"><span id="charCount">0</span> chars</span>
+      </div>
+      <div class="right checkbox-row" style="margin-top:0;">
+        <label><input type="checkbox" id="autoZhChk" /> 自动翻译中文（懒加载，每句只翻一次）</label>
+        <label><input type="checkbox" id="autoIpaChk" /> 显示美式音标（懒加载，每句只生成一次）</label>
       </div>
     </div>
 
-    <div class="top-controls" style="margin-top:10px">
-      <div class="left flex">
-        <label>朗读引擎：</label>
-        <select id="engine">
-          <option value="browser">浏览器（免费）</option>
-          <option value="openai">OpenAI / APIMart TTS</option>
+    <div class="row-flex" style="margin-top:10px;">
+      <label class="left" style="flex:0 0 auto;font-weight:500;font-size:13px;">
+        朗读引擎：
+        <select id="engineSelect" style="width:auto;min-width:220px;">
+          <option value="apitts">OpenAI / APIMart TTS（逐句懒加载 + 缓存，省钱）</option>
+          <option value="browser">浏览器朗读（免费，不用 Key）</option>
         </select>
-        <label>速度：<span id="rateVal">1.00x</span></label>
-        <input id="rate" type="range" min="0.7" max="1.4" step="0.05" value="1.0">
+      </label>
+      <div class="right" style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:13px;">速度：<span id="speedLabel">1.00x</span></span>
+        <input type="range" id="rateRange" min="0.6" max="1.4" step="0.05" value="1.0" class="slider" />
       </div>
-      <div class="right">
-        <button id="splitBtn" class="btn">拆句（不立即翻译）</button>
-        <button id="readFromCurrent" class="btn">从当前句开始朗读</button>
-        <button id="readAllBrowser" class="btn outline">直接朗读整段（浏览器）</button>
-        <button id="testSpeak" class="btn outline">测试朗读（Hello）</button>
-        <button id="stopBtn" class="btn outline">停止</button>
-      </div>
+    </div>
+
+    <div class="controls">
+      <button id="splitBtn" class="btn primary">拆句（不立即翻译）</button>
+      <button id="playFromCurrentBtn" class="btn">从当前句开始朗读</button>
+      <button id="quickBrowserBtn" class="btn">直接朗读整段（浏览器）</button>
+      <button id="testBtn" class="btn">测试朗读（Hello）</button>
+      <button id="stopBtn" class="btn">停止朗读</button>
     </div>
     <div id="status" class="status"></div>
   </div>
 
-  <!-- 中英并排列表 -->
+  <!-- 句子列表 -->
   <div class="card">
-    <div id="rowsBox" class="rows"></div>
+    <div class="sent-list-wrap" id="sentList"></div>
   </div>
 </div>
 
+<audio id="audioPlayer"></audio>
+
+<!-- 解析 docx -->
 <script src="https://unpkg.com/mammoth@1.7.0/mammoth.browser.min.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", function(){
+(function(){
+  const $ = id => document.getElementById(id);
 
-  function $(id){return document.getElementById(id);}
-
-  const apiKeyInput = $("apiKey");
-  const backendSel = $("backend");
-  const saveKeyBtn = $("saveKey");
-  const saveHint = $("saveHint");
-  const inputEn = $("inputEn");
-  const docxInput = $("docx");
-  const autoZhChk = $("autoZh");
-  const autoIpaChk = $("autoIpa");
-  const engineSel = $("engine");
-  const rateRange = $("rate");
-  const rateVal = $("rateVal");
+  const apiKeyInput = $("apiKeyInput");
+  const providerSelect = $("providerSelect");
+  const saveKeyBtn = $("saveKeyBtn");
+  const saveKeyStatus = $("saveKeyStatus");
+  const inputText = $("inputText");
+  const fileInput = $("fileInput");
+  const charCountEl = $("charCount");
+  const autoZhChk = $("autoZhChk");
+  const autoIpaChk = $("autoIpaChk");
+  const engineSelect = $("engineSelect");
+  const rateRange = $("rateRange");
+  const speedLabel = $("speedLabel");
   const splitBtn = $("splitBtn");
-  const readFromCurrentBtn = $("readFromCurrent");
-  const readAllBrowserBtn = $("readAllBrowser");
-  const testSpeakBtn = $("testSpeak");
+  const playFromCurrentBtn = $("playFromCurrentBtn");
+  const quickBrowserBtn = $("quickBrowserBtn");
+  const testBtn = $("testBtn");
   const stopBtn = $("stopBtn");
-  const rowsBox = $("rowsBox");
   const statusEl = $("status");
-  const charCount = $("charCount");
-  const themeBtn = $("themeBtn");
+  const sentList = $("sentList");
+  const audioPlayer = $("audioPlayer");
 
-  // 学习时长组件元素
-  const studyCard = $("studyWidget");
-  const btnDetail = $("toggleDetail");
-  const btnTimer = $("toggleTimer");
-  const kThis = $("kThis");
-  const kTotal = $("kTotal");
-  const kDay = $("kDay");
-  const kWeek = $("kWeek");
-  const kMonth = $("kMonth");
-  const kYear = $("kYear");
+  const themeToggle = $("themeToggle");
+  const sessionTimeEl = $("sessionTime");
+  const totalTimeEl = $("totalTime");
+  const studyToggle = $("studyToggle");
+  const studyDetail = $("studyDetail");
+  const kTodayEl = $("kToday");
+  const kWeekEl = $("kWeek");
+  const kMonthEl = $("kMonth");
+  const kYearEl = $("kYear");
 
-  const LS_KEY = "openaitts.apiKey";
-  const LS_BACKEND = "openaitts.backend";
-  const LS_THEME = "openaitts.theme";
-  const LS_DAILY = "openaitts.study.dailySeconds";
+  const LS_KEYS = {
+    API_KEY : "ttsReader:apiKey",
+    PROVIDER: "ttsReader:provider",
+    THEME   : "ttsReader:theme",
+    STUDY   : "ttsReader:dailySeconds"
+  };
 
-  // ====== 恢复本地 Key & backend ======
-  try{
-    const stored = localStorage.getItem(LS_KEY);
-    if(stored) apiKeyInput.value = stored;
-    const b = localStorage.getItem(LS_BACKEND);
-    if(b) backendSel.value = b;
-  }catch(e){}
+  /* ---------- 工具函数 ---------- */
+  function setStatus(msg){
+    statusEl.textContent = msg || "";
+  }
+  function showSaveStatus(msg){
+    saveKeyStatus.textContent = msg;
+    if(!msg) return;
+    setTimeout(()=>{saveKeyStatus.textContent="";},1800);
+  }
+  function updateCharCount(){
+    charCountEl.textContent = (inputText.value || "").length;
+  }
+  function clamp(v,min,max){return Math.min(max,Math.max(min,v));}
 
-  saveKeyBtn.addEventListener("click", function(){
-    try{
-      localStorage.setItem(LS_KEY, apiKeyInput.value.trim());
-      localStorage.setItem(LS_BACKEND, backendSel.value);
-      saveHint.style.display = "block";
-      setTimeout(function(){saveHint.style.display="none";},1500);
-    }catch(e){
-      alert("浏览器禁止了本地存储，无法保存 Key");
-    }
-  });
-
-  backendSel.addEventListener("change", function(){
-    try{localStorage.setItem(LS_BACKEND, backendSel.value);}catch(e){}
-  });
-
-  // ====== 主题切换 ======
-  function applyTheme(t){
-    if(t === "dark"){
-      document.body.classList.add("dark");
-      themeBtn.textContent = "☀️ 浅色";
-    }else{
-      document.body.classList.remove("dark");
-      themeBtn.textContent = "🌙 深色";
-    }
-    try{localStorage.setItem(LS_THEME,t);}catch(e){}
+  /* ---------- 主题 ---------- */
+  function applyTheme(theme){
+    document.body.classList.toggle("dark", theme==="dark");
+    themeToggle.textContent = theme==="dark" ? "☀️ 浅色" : "🌙 深色";
+    try{localStorage.setItem(LS_KEYS.THEME, theme);}catch(e){}
   }
   (function initTheme(){
-    let t = "light";
-    try{
-      const s = localStorage.getItem(LS_THEME);
-      if(s) t = s;
-      else if(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches){
-        t = "dark";
-      }
-    }catch(e){}
-    applyTheme(t);
+    let theme;
+    try{theme = localStorage.getItem(LS_KEYS.THEME);}catch(e){}
+    if(!theme){
+      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      theme = prefersDark ? "dark" : "light";
+    }
+    applyTheme(theme);
   })();
-  themeBtn.addEventListener("click",function(){
-    const now = document.body.classList.contains("dark") ? "dark":"light";
-    applyTheme(now==="dark"?"light":"dark");
+  themeToggle.addEventListener("click",()=>{
+    const current = document.body.classList.contains("dark") ? "dark" : "light";
+    applyTheme(current==="dark" ? "light" : "dark");
   });
 
-  // ====== 字数统计 ======
-  function updateCharCount(){
-    charCount.textContent = (inputEn.value || "").length + " chars";
+  /* ---------- 学习计时（多维度） ---------- */
+  function todayStr(d=new Date()){
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
   }
-  ["input","change","keyup","paste"].forEach(function(ev){
-    inputEn.addEventListener(ev,updateCharCount);
-  });
-  updateCharCount();
-
-  // ====== 学习时长统计 ======
-  function todayStr(d){
-    d = d || new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,"0");
-    const dd = String(d.getDate()).padStart(2,"0");
-    return y+"-"+m+"-"+dd;
-  }
-  function getMonday(d){
-    const x = new Date(d);
-    const day = (x.getDay()+6)%7; // 周一=0
-    x.setHours(0,0,0,0);
-    x.setDate(x.getDate()-day);
-    return x;
-  }
-  function endOfWeek(d){
-    const m = getMonday(d);
-    const e = new Date(m);
-    e.setDate(m.getDate()+6);
-    return e;
-  }
-  function startOfMonth(d){return new Date(d.getFullYear(), d.getMonth(),1);}
-  function endOfMonth(d){return new Date(d.getFullYear(), d.getMonth()+1,0);}
-  function startOfYear(d){return new Date(d.getFullYear(),0,1);}
-  function endOfYear(d){return new Date(d.getFullYear(),11,31);}
-
   function loadDaily(){
     try{
-      const raw = localStorage.getItem(LS_DAILY);
+      const raw = localStorage.getItem(LS_KEYS.STUDY);
       if(!raw) return {};
       const obj = JSON.parse(raw);
       return obj && typeof obj==="object" ? obj : {};
     }catch(e){return {};}
   }
   function saveDaily(map){
-    try{localStorage.setItem(LS_DAILY, JSON.stringify(map));}catch(e){}
+    try{localStorage.setItem(LS_KEYS.STUDY, JSON.stringify(map));}catch(e){}
   }
-
   function fmtHMS(sec){
     sec = Math.max(0,Math.floor(sec));
-    const h = Math.floor(sec/3600);
-    const m = Math.floor((sec%3600)/60);
-    const s = sec%60;
-    const pad = n => (n<10?"0":"")+n;
-    return pad(h)+":"+pad(m)+":"+pad(s);
+    const h=Math.floor(sec/3600);
+    const m=Math.floor((sec%3600)/60);
+    const s=sec%60;
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
   }
   function fmtHM(sec){
     sec = Math.max(0,Math.floor(sec));
-    const h = Math.floor(sec/3600);
-    const m = Math.floor((sec%3600)/60);
-    return h+"小时"+m+"分钟";
+    const h=Math.floor(sec/3600);
+    const m=Math.floor((sec%3600)/60);
+    return `${h}小时${m}分钟`;
   }
   function minutesStr(sec){
-    const m = Math.round(Math.max(0,sec)/60);
-    return m+"分钟";
+    return `${Math.round(sec/60)}分钟`;
   }
-  function sumRange(map,startDate,endDate){
-    const s = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-    const e = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-    let cur = new Date(s);
-    let total = 0;
-    while(cur <= e){
-      total += map[todayStr(cur)] || 0;
+  function startOfWeek(d){
+    const x=new Date(d);
+    const day=(x.getDay()+6)%7; // 周一=0
+    x.setHours(0,0,0,0);
+    x.setDate(x.getDate()-day);
+    return x;
+  }
+  function endOfWeek(d){
+    const s=startOfWeek(d);
+    const e=new Date(s);
+    e.setDate(s.getDate()+6);
+    return e;
+  }
+  function startOfMonth(d){return new Date(d.getFullYear(), d.getMonth(), 1);}
+  function endOfMonth(d){return new Date(d.getFullYear(), d.getMonth()+1, 0);}
+  function startOfYear(d){return new Date(d.getFullYear(),0,1);}
+  function endOfYear(d){return new Date(d.getFullYear(),11,31);}
+  function sumRange(map, startDate, endDate){
+    const s=new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const e=new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    let cur=new Date(s), total=0;
+    while(cur<=e){
+      const key=todayStr(cur);
+      total += map[key] || 0;
       cur.setDate(cur.getDate()+1);
     }
     return total;
@@ -508,373 +502,444 @@ document.addEventListener("DOMContentLoaded", function(){
     return Object.values(map).reduce((a,b)=>a+(+b||0),0);
   }
 
-  let daily = loadDaily();
   let sessionSeconds = 0;
-  let tickTimer = null;
+  let studyTimer = null;
+  let dailyMap = loadDaily();
   let visible = document.visibilityState === "visible";
-  let running = true; // 进入页面默认计时
 
-  function renderStats(){
-    const now = new Date();
-    kThis.textContent = fmtHMS(sessionSeconds);
-    kTotal.textContent = fmtHM(totalAll(daily));
-    kDay.textContent = minutesStr(daily[todayStr(now)] || 0);
-    kWeek.textContent = minutesStr(sumRange(daily, getMonday(now), endOfWeek(now)));
-    kMonth.textContent = minutesStr(sumRange(daily, startOfMonth(now), endOfMonth(now)));
-    kYear.textContent = minutesStr(sumRange(daily, startOfYear(now), endOfYear(now)));
+  function renderStudy(){
+    const now=new Date();
+    sessionTimeEl.textContent = fmtHMS(sessionSeconds);
+    totalTimeEl.textContent = fmtHM(totalAll(dailyMap));
+    kTodayEl.textContent = minutesStr(dailyMap[todayStr(now)] || 0);
+    kWeekEl.textContent = minutesStr(sumRange(dailyMap, startOfWeek(now), endOfWeek(now)));
+    kMonthEl.textContent = minutesStr(sumRange(dailyMap, startOfMonth(now), endOfMonth(now)));
+    kYearEl.textContent = minutesStr(sumRange(dailyMap, startOfYear(now), endOfYear(now)));
   }
-
   function tickStudy(){
-    if(!visible || !running) return;
+    if(!visible) return;
     sessionSeconds += 1;
-    const key = todayStr(new Date());
-    daily[key] = (daily[key] || 0) + 1;
-    renderStats();
-    if(sessionSeconds % 10 === 0) saveDaily(daily);
+    const key=todayStr(new Date());
+    dailyMap[key]=(dailyMap[key]||0)+1;
   }
-
-  tickTimer = setInterval(tickStudy,1000);
-  renderStats();
-
-  document.addEventListener("visibilitychange",function(){
+  function startStudyTimer(){
+    if(studyTimer) clearInterval(studyTimer);
+    studyTimer = setInterval(()=>{
+      tickStudy();
+      if(sessionSeconds % 2 === 0) renderStudy();
+      if(sessionSeconds % 10 === 0) saveDaily(dailyMap);
+    },1000);
+    renderStudy();
+  }
+  document.addEventListener("visibilitychange",()=>{
     visible = document.visibilityState === "visible";
   });
-  window.addEventListener("focus",function(){visible=true;});
-  window.addEventListener("blur",function(){visible=false;});
-  window.addEventListener("beforeunload",function(){saveDaily(daily);});
-
-  btnDetail.addEventListener("click",function(){
-    studyCard.classList.toggle("open");
-    btnDetail.textContent = studyCard.classList.contains("open") ? "收起" : "详情";
+  window.addEventListener("beforeunload",()=>{saveDaily(dailyMap);});
+  studyToggle.addEventListener("click",()=>{
+    const open = studyDetail.style.display === "block";
+    studyDetail.style.display = open ? "none" : "block";
   });
-  btnTimer.addEventListener("click",function(){
-    running = !running;
-    btnTimer.textContent = running ? "暂停" : "开始";
+  startStudyTimer();
+
+  /* ---------- 读取 Key & Provider ---------- */
+  (function initKeys(){
+    try{
+      const k = localStorage.getItem(LS_KEYS.API_KEY);
+      if(k) apiKeyInput.value = k;
+      const p = localStorage.getItem(LS_KEYS.PROVIDER);
+      if(p) providerSelect.value = p;
+    }catch(e){}
+  })();
+  saveKeyBtn.addEventListener("click",()=>{
+    try{
+      const key = apiKeyInput.value.trim().replace(/^["']|["']$/g,"");
+      localStorage.setItem(LS_KEYS.API_KEY, key);
+      localStorage.setItem(LS_KEYS.PROVIDER, providerSelect.value);
+      apiKeyInput.value = key;
+      showSaveStatus("已保存到本地 ✓");
+    }catch(e){
+      showSaveStatus("保存失败（可能浏览器禁止 localStorage）");
+    }
   });
 
-  // ====== 拆句 / 列表 ======
-  let EN = [];
+  /* ---------- 文本输入 & 文件读取 ---------- */
+  inputText.addEventListener("input", updateCharCount);
+  updateCharCount();
+  fileInput.addEventListener("change", async (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    if(!file.name.endsWith(".docx")){
+      alert("目前仅支持 .docx 文件");
+      return;
+    }
+    try{
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await window.mammoth.extractRawText({arrayBuffer});
+      inputText.value = (result.value || "").trim();
+      updateCharCount();
+      setStatus("已从 Word 文档提取纯文本。");
+    }catch(err){
+      console.error(err);
+      setStatus("读取 Word 文档失败，请检查文件是否损坏。");
+    }
+  });
+
+  rateRange.addEventListener("input",()=>{
+    const v = parseFloat(rateRange.value);
+    speedLabel.textContent = v.toFixed(2) + "x";
+  });
+
+  /* ---------- 句子数据结构 ---------- */
+  /**
+   * sentences: [{ en, zh, ipa, zhLoading, ipaLoading, audioUrl }]
+   */
+  let sentences = [];
   let currentIndex = 0;
-  let cacheZH = {};   // sentence -> zh
-  let cacheIPA = {};  // sentence -> ipa
-  let cacheTTS = {};  // sentence -> objectURL
-  let isSpeaking = false;
-  const audio = new Audio();
+  let isPlaying = false;
 
-  function splitSentences(txt){
-    const cleaned = (txt || "").replace(/\s+/g," ").trim();
+  function splitSentences(text){
+    const cleaned = (text || "").replace(/\r\n/g,"\n").replace(/\s+$/g,"");
     if(!cleaned) return [];
-    const arr = cleaned.split(/(?<=[.!?])\s+/);
-    return arr.filter(s => s.trim().length>0);
+    // 用换行拆粗略段落，再用标点细分
+    const parts = cleaned.split(/\n+/).flatMap(block=>{
+      block = block.trim();
+      if(!block) return [];
+      return block
+        .split(/(?<=[.!?])\s+(?=[A-Z0-9“"']|\bI\b)/)
+        .map(s=>s.trim())
+        .filter(Boolean);
+    });
+    return parts;
   }
 
-  function renderRows(){
-    rowsBox.innerHTML = "";
-    if(!EN.length) return;
-    EN.forEach(function(sent,i){
+  function renderSentences(){
+    sentList.innerHTML = "";
+    if(!sentences.length){
+      sentList.innerHTML = '<div style="padding:12px;font-size:13px;color:var(--muted);">还没有句子，请先粘贴英文并点击“拆句”。</div>';
+      return;
+    }
+    sentences.forEach((s,i)=>{
       const row = document.createElement("div");
-      row.className = "row"+(i===currentIndex?" active":"");
-      row.dataset.index = i;
+      row.className = "sent-row" + (i===currentIndex ? " active" : "");
+      row.dataset.idx = i;
 
+      const left = document.createElement("div");
       const enDiv = document.createElement("div");
-      const enMain = document.createElement("div");
-      enMain.className = "en-main";
-      enMain.textContent = sent;
+      enDiv.className = "sent-en-main";
+      enDiv.textContent = s.en;
+
       const ipaDiv = document.createElement("div");
-      ipaDiv.className = "ipa";
-      ipaDiv.textContent = cacheIPA[sent] ? "/"+cacheIPA[sent]+"/" : "";
-      enDiv.appendChild(enMain);
-      enDiv.appendChild(ipaDiv);
+      ipaDiv.className = "sent-ipa";
+      ipaDiv.textContent = s.ipa ? `/${s.ipa}/` : (autoIpaChk.checked ? (s.ipaLoading ? "音标生成中…" : "（点击朗读或该句时自动生成音标）") : "");
 
-      const zhDiv = document.createElement("div");
-      zhDiv.className = "zh";
-      const zhText = document.createElement("div");
-      zhText.className = "zh-text";
-      zhText.textContent = cacheZH[sent] || "";
-      zhDiv.appendChild(zhText);
+      left.appendChild(enDiv);
+      left.appendChild(ipaDiv);
 
-      row.appendChild(enDiv);
-      row.appendChild(zhDiv);
+      const right = document.createElement("div");
+      right.className = "sent-zh";
+      right.textContent = s.zh || (autoZhChk.checked ? (s.zhLoading ? "翻译中…" : "（点击朗读或该句时自动翻译）") : "");
 
-      row.addEventListener("click",function(){
-        setActive(i);
-        ensureZHAndIPA(i);
+      row.appendChild(left);
+      row.appendChild(right);
+
+      row.addEventListener("click", async ()=>{
+        highlightSentence(i);
+        await lazyEnsureZhAndIpa(i);
+        renderSentences();
       });
 
-      rowsBox.appendChild(row);
+      sentList.appendChild(row);
     });
   }
 
-  function refreshRow(i){
-    const rows = rowsBox.querySelectorAll(".row");
-    if(!rows[i]) return;
-    const sent = EN[i];
-    const ipa = cacheIPA[sent] || "";
-    const zh = cacheZH[sent] || "";
-    const ipaDiv = rows[i].querySelector(".ipa");
-    const zhDiv = rows[i].querySelector(".zh-text");
-    ipaDiv.textContent = ipa ? "/"+ipa+"/" : "";
-    zhDiv.textContent = zh;
-  }
-
-  function setActive(i){
-    currentIndex = i;
-    const rows = rowsBox.querySelectorAll(".row");
-    rows.forEach((row,idx)=> row.classList.toggle("active",idx===i));
-    const row = rows[i];
+  function highlightSentence(idx){
+    currentIndex = idx;
+    [...sentList.children].forEach((row, i)=>{
+      if(!row.classList) return;
+      row.classList.toggle("active", i===idx);
+    });
+    const row = sentList.children[idx];
     if(row) row.scrollIntoView({behavior:"smooth",block:"center"});
   }
 
-  splitBtn.addEventListener("click",function(){
-    const txt = inputEn.value.trim();
-    if(!txt){
-      alert("请先粘贴英文内容");
-      return;
-    }
-    EN = splitSentences(txt);
-    if(!EN.length){
-      alert("未检测到完整句子（请检查是否有句号/问号等结束符）");
-      return;
-    }
-    currentIndex = 0;
-    cacheZH = {};
-    cacheIPA = {};
-    cacheTTS = {};
-    statusEl.classList.remove("bad","good");
-    statusEl.textContent = "已拆分 "+EN.length+" 句。点某一句时再懒加载翻译和音标。";
-    renderRows();
-    setActive(0);
-  });
-
-  // ====== 读取 .docx ======
-  docxInput.addEventListener("change", function(ev){
-    const f = ev.target.files && ev.target.files[0];
-    if(!f) return;
-    const reader = new FileReader();
-    reader.onload = function(e){
-      const arrayBuffer = e.target.result;
-      window.mammoth.extractRawText({arrayBuffer})
-      .then(function(res){
-        inputEn.value = res.value || "";
-        updateCharCount();
-      })
-      .catch(function(err){
-        alert("解析 docx 出错："+err);
-      });
-    };
-    reader.readAsArrayBuffer(f);
-  });
-
-  // ====== OpenAI / APIMart 通用调用 ======
-  function getBaseURL(){
-    return backendSel.value === "apimart"
-      ? "https://api.apimart.com"
+  /* ---------- 调用接口（OpenAI / APIMart） ---------- */
+  function getBaseUrl(){
+    return providerSelect.value === "apimart"
+      ? "https://api.apimart.ai"
       : "https://api.openai.com";
   }
-  function getHeaders(){
+  function getApiKeyOrThrow(){
     const key = apiKeyInput.value.trim();
-    return {
-      "Content-Type":"application/json",
-      "Authorization":"Bearer "+key
-    };
-  }
-  function needAPI(){
-    if(!apiKeyInput.value.trim()){
-      alert("此操作需要 API Key，请先在顶部输入并保存。");
-      return false;
+    if(!key){
+      throw new Error("请先在顶部输入 API Key（OpenAI 或 APIMart）");
     }
-    return true;
+    return key;
   }
 
-  async function callChat(messages){
-    const base = getBaseURL();
-    const res = await fetch(base+"/v1/chat/completions",{
+  async function callChatOnce(prompt, systemPrompt){
+    const key = getApiKeyOrThrow();
+    const base = getBaseUrl();
+    const body = {
+      model: "gpt-4o-mini",
+      messages: [
+        {role:"system", content: systemPrompt},
+        {role:"user", content: prompt}
+      ],
+      temperature:0.2
+    };
+    const res = await fetch(base + "/v1/chat/completions",{
       method:"POST",
-      headers:getHeaders(),
-      body:JSON.stringify({
-        model:"gpt-4o-mini",
-        messages:messages,
-        temperature:0.2
-      })
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":`Bearer ${key}`
+      },
+      body:JSON.stringify(body)
     });
     if(!res.ok){
-      const t = await res.text();
-      throw new Error(t);
+      const txt = await res.text().catch(()=>res.statusText);
+      throw new Error("接口错误：" + txt);
     }
     const data = await res.json();
-    const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-    return content || "";
+    const content = data.choices?.[0]?.message?.content || "";
+    return content.trim();
   }
 
-  async function ensureZHAndIPA(index){
-    const text = EN[index];
-    if(!text) return;
-    const needZh = autoZhChk.checked && !cacheZH[text];
-    const needIpa = autoIpaChk.checked && !cacheIPA[text];
-    if(!needZh && !needIpa) return;
-    if(!needAPI()) return;
-
-    statusEl.classList.remove("bad","good");
-    statusEl.textContent = "正在为当前句生成 "+(needZh?"中文 ":"")+(needIpa?"音标":"")+" …";
-    try{
-      if(needZh){
-        const zhPrompt = [
-          {role:"system",content:"你是英文翻译助手。只输出对应的简体中文，不要任何解释。"},
-          {role:"user",content:text}
-        ];
-        const zh = await callChat(zhPrompt);
-        cacheZH[text] = zh.trim();
-      }
-      if(needIpa){
-        const ipaPrompt = [
-          {role:"system",content:"你是音标助手。请给出输入句子的美式 IPA 音标。只输出音标，不要其它说明，不要加斜杠。"},
-          {role:"user",content:text}
-        ];
-        const ipa = await callChat(ipaPrompt);
-        cacheIPA[text] = ipa.replace(/\//g,"").trim();
-      }
-      refreshRow(index);
-      statusEl.classList.remove("bad");
-      statusEl.classList.add("good");
-      statusEl.textContent = "已更新当前句。";
-    }catch(err){
-      console.error(err);
-      statusEl.classList.remove("good");
-      statusEl.classList.add("bad");
-      statusEl.textContent = "生成失败："+err.message;
-    }
-  }
-
-  // ====== 浏览器朗读 ======
-  function clamp(v,min,max){return Math.min(max,Math.max(min,v));}
-  function ensureVoicesLoaded(timeout){
-    timeout = timeout || 2000;
-    return new Promise(function(resolve){
-      function ready(){
-        const voices = window.speechSynthesis ? speechSynthesis.getVoices() : [];
-        return voices && voices.length>0;
-      }
-      if(ready()) return resolve(true);
-      const id = setInterval(function(){
-        if(ready()){clearInterval(id);resolve(true);}
-      },150);
-      setTimeout(function(){clearInterval(id);resolve(true);},timeout);
-    });
-  }
-
-  async function speakBrowserFrom(start){
-    if(!EN.length){
-      alert("请先拆句");
-      return;
-    }
-    await ensureVoicesLoaded();
-    window.speechSynthesis.cancel();
-    isSpeaking = true;
-    for(let i=start;i<EN.length;i++){
-      if(!isSpeaking) break;
-      setActive(i);
-      const utt = new SpeechSynthesisUtterance(EN[i]);
-      utt.lang = "en-US";
-      utt.rate = clamp(parseFloat(rateRange.value)||1,0.7,1.4);
-      await new Promise(function(res){
-        utt.onend = res;
-        utt.onerror = res;
-        speechSynthesis.speak(utt);
-      });
-    }
-  }
-
-  // ====== OpenAI / APIMart TTS ======
   async function ttsOnce(text){
-    if(cacheTTS[text]) return cacheTTS[text];
-    if(!needAPI()) throw new Error("需要 API Key");
-
-    const base = getBaseURL();
-    const res = await fetch(base+"/v1/audio/speech",{
+    const key = getApiKeyOrThrow();
+    const base = getBaseUrl();
+    const body = {
+      model: "gpt-4o-mini-tts",
+      input: text,
+      voice: "alloy",
+      response_format: "mp3",
+      speed: clamp(parseFloat(rateRange.value)||1.0,0.6,1.4)
+    };
+    const res = await fetch(base + "/v1/audio/speech",{
       method:"POST",
-      headers:getHeaders(),
-      body:JSON.stringify({
-        model:"gpt-4o-mini-tts",
-        voice:"alloy",
-        input:text,
-        format:"mp3"
-      })
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":`Bearer ${key}`,
+        "Accept":"audio/mpeg"
+      },
+      body:JSON.stringify(body)
     });
     if(!res.ok){
-      const t = await res.text();
-      throw new Error(t);
+      const txt = await res.text().catch(()=>res.statusText);
+      throw new Error("TTS 出错：" + txt);
     }
     const buf = await res.arrayBuffer();
-    const url = URL.createObjectURL(new Blob([buf],{type:"audio/mpeg"}));
-    cacheTTS[text] = url;
-    return url;
+    const blob = new Blob([buf],{type:"audio/mpeg"});
+    return URL.createObjectURL(blob);
   }
 
-  async function speakOpenAIFrom(start){
-    if(!EN.length){
-      alert("请先拆句");
+  /* ---------- 懒加载翻译 & 音标（每句只调用一次） ---------- */
+  async function lazyEnsureZhAndIpa(idx){
+    const s = sentences[idx];
+    if(!s) return;
+    const tasks = [];
+    if(autoZhChk.checked && !s.zh && !s.zhLoading){
+      s.zhLoading = true;
+      tasks.push(
+        (async ()=>{
+          try{
+            const zh = await callChatOnce(
+              s.en,
+              "你是一个专业的英译中助手。请把用户给出的英文句子精准翻译成简体中文，返回纯中文，不要加解释。"
+            );
+            s.zh = zh;
+          }catch(e){
+            console.error(e);
+            s.zh = "【翻译失败：" + e.message + "】";
+          }finally{
+            s.zhLoading = false;
+          }
+        })()
+      );
+    }
+    if(autoIpaChk.checked && !s.ipa && !s.ipaLoading){
+      s.ipaLoading = true;
+      tasks.push(
+        (async ()=>{
+          try{
+            const ipa = await callChatOnce(
+              s.en,
+              "You are a phonetics assistant. For the given English sentence, output ONLY its American English IPA transcription, without slashes or extra text."
+            );
+            s.ipa = ipa.replace(/^\/|\/$/g,"").trim();
+          }catch(e){
+            console.error(e);
+            s.ipa = "IPA 生成失败";
+          }finally{
+            s.ipaLoading = false;
+          }
+        })()
+      );
+    }
+    if(tasks.length){
+      renderSentences();
+      try{await Promise.all(tasks);}catch(e){}
+      renderSentences();
+    }
+  }
+
+  /* ---------- 拆句 ---------- */
+  splitBtn.addEventListener("click",()=>{
+    const text = inputText.value.trim();
+    if(!text){
+      alert("请先粘贴英文内容或上传 .docx 文件。");
       return;
     }
-    isSpeaking = true;
-    statusEl.classList.remove("bad","good");
-    for(let i=start;i<EN.length;i++){
-      if(!isSpeaking) break;
-      setActive(i);
-      try{
-        const url = await ttsOnce(EN[i]);
-        audio.src = url;
-        audio.playbackRate = clamp(parseFloat(rateRange.value)||1,0.7,1.4);
-        await new Promise(function(res){
-          audio.onended = res;
-          audio.onerror = res;
-          audio.play().catch(res);
-        });
-      }catch(err){
-        console.error(err);
-        statusEl.classList.add("bad");
-        statusEl.textContent = "TTS 出错："+err.message;
-        break;
+    const arr = splitSentences(text);
+    if(!arr.length){
+      alert("没有检测到完整句子，请检查文本是否包含英文句号 / 问号 / 感叹号。");
+      return;
+    }
+    sentences = arr.map(en=>({en, zh:"", ipa:"", zhLoading:false, ipaLoading:false, audioUrl:null}));
+    currentIndex = 0;
+    renderSentences();
+    highlightSentence(0);
+    setStatus("已完成拆句。翻译 & 音标将在朗读或点击对应句子时按需生成。");
+  });
+
+  /* ---------- 浏览器朗读 ---------- */
+  async function ensureVoicesLoaded(timeout=2000){
+    return new Promise(resolve=>{
+      const have = ()=> speechSynthesis.getVoices().length>0;
+      if(have()) return resolve(true);
+      const id=setInterval(()=>{
+        if(have()){clearInterval(id);resolve(true);}
+      },150);
+      setTimeout(()=>{clearInterval(id);resolve(true);},timeout);
+    });
+  }
+  async function browserSpeakText(text){
+    await ensureVoicesLoaded();
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US";
+    u.rate = clamp(parseFloat(rateRange.value)||1.0,0.6,1.4);
+    return new Promise(res=>{
+      u.onend=res;
+      u.onerror=res;
+      speechSynthesis.speak(u);
+    });
+  }
+
+  quickBrowserBtn.addEventListener("click",async()=>{
+    const text = inputText.value.trim();
+    if(!text){
+      alert("请先粘贴英文内容。");
+      return;
+    }
+    try{
+      setStatus("使用浏览器朗读整段中…");
+      await browserSpeakText(text);
+      setStatus("朗读结束。");
+    }catch(e){
+      console.error(e);
+      setStatus("浏览器朗读失败：" + (e.message||e));
+    }
+  });
+
+  testBtn.addEventListener("click",async()=>{
+    try{
+      setStatus("测试浏览器朗读中…");
+      await browserSpeakText("Hello! This is a test.");
+      setStatus("测试朗读完成。");
+    }catch(e){
+      setStatus("测试失败：" + (e.message||e));
+    }
+  });
+
+  /* ---------- API TTS 逐句播放 + 缓存 ---------- */
+  async function playSentenceWithApi(idx){
+    if(idx<0 || idx>=sentences.length) return;
+    const s = sentences[idx];
+    highlightSentence(idx);
+    await lazyEnsureZhAndIpa(idx); // 懒加载翻译 & IPA
+
+    try{
+      if(!s.audioUrl){
+        setStatus(`TTS 生成中（第 ${idx+1} 句）…`);
+        const url = await ttsOnce(s.en);
+        s.audioUrl = url;
+      }else{
+        setStatus(`播放缓存音频（第 ${idx+1} 句），不会再次消耗额度。`);
       }
+      await playAudioUrl(s.audioUrl);
+    }catch(e){
+      console.error(e);
+      setStatus(e.message || "TTS 播放失败");
     }
   }
 
-  // ====== 朗读按钮 ======
-  readFromCurrentBtn.addEventListener("click",function(){
-    if(engineSel.value === "browser"){
-      speakBrowserFrom(currentIndex);
-    }else{
-      speakOpenAIFrom(currentIndex);
+  function playAudioUrl(url){
+    return new Promise((resolve,reject)=>{
+      audioPlayer.src = url;
+      audioPlayer.playbackRate = clamp(parseFloat(rateRange.value)||1.0,0.6,1.4);
+      audioPlayer.onended = ()=>resolve();
+      audioPlayer.onerror = (e)=>reject(new Error("音频播放失败"));
+      audioPlayer.play().catch(reject);
+    });
+  }
+
+  async function speakFrom(idx){
+    if(!sentences.length){
+      alert("还没有句子，请先点击“拆句”。");
+      return;
     }
-  });
+    if(idx<0 || idx>=sentences.length) idx=0;
+    currentIndex = idx;
+    isPlaying = true;
 
-  readAllBrowserBtn.addEventListener("click",function(){
-    speakBrowserFrom(0);
-  });
-
-  testSpeakBtn.addEventListener("click",async function(){
-    try{
-      await ensureVoicesLoaded();
-      const u = new SpeechSynthesisUtterance("Hello from your browser text to speech.");
-      u.lang = "en-US";
-      u.rate = clamp(parseFloat(rateRange.value)||1,0.7,1.4);
-      speechSynthesis.speak(u);
-    }catch(e){
-      alert("浏览器朗读不可用："+e.message);
+    if(engineSelect.value === "browser"){
+      // 逐句浏览器朗读
+      for(let i=idx; i<sentences.length; i++){
+        if(!isPlaying) break;
+        highlightSentence(i);
+        await lazyEnsureZhAndIpa(i); // 浏览器朗读时也懒加载翻译 & IPA
+        await browserSpeakText(sentences[i].en);
+      }
+      setStatus("浏览器朗读完成。");
+      return;
     }
+
+    // API TTS 逐句 + 缓存
+    for(let i=idx; i<sentences.length; i++){
+      if(!isPlaying) break;
+      await playSentenceWithApi(i);
+    }
+    setStatus("朗读完成。");
+  }
+
+  playFromCurrentBtn.addEventListener("click",()=>{
+    speakFrom(currentIndex);
   });
 
-  stopBtn.addEventListener("click",function(){
-    isSpeaking = false;
-    if(window.speechSynthesis) speechSynthesis.cancel();
-    audio.pause();
+  stopBtn.addEventListener("click",()=>{
+    isPlaying = false;
+    try{speechSynthesis.cancel();}catch(e){}
+    try{audioPlayer.pause();}catch(e){}
+    setStatus("已停止朗读。");
   });
 
-  rateRange.addEventListener("input",function(){
-    rateVal.textContent = (parseFloat(rateRange.value)||1).toFixed(2)+"x";
+  /* ---------- 事件绑定 ---------- */
+  engineSelect.addEventListener("change",()=>{
+    setStatus(engineSelect.value==="browser"
+      ? "当前使用浏览器自带语音引擎（完全免费）。"
+      : "当前使用 OpenAI / APIMart TTS（逐句懒加载 + 缓存，同一句重复朗读不会再次消耗额度）。"
+    );
   });
-  rateVal.textContent = (parseFloat(rateRange.value)||1).toFixed(2)+"x";
 
-});
+  // 给句子列表也绑定“从这里开始朗读”
+  sentList.addEventListener("dblclick",(e)=>{
+    const row = e.target.closest(".sent-row");
+    if(!row) return;
+    const idx = Number(row.dataset.idx||0);
+    speakFrom(idx);
+  });
+
+})();
 </script>
 </body>
 </html>
